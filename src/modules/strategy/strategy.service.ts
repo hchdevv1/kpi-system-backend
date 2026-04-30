@@ -1,125 +1,210 @@
-import { Injectable , BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { DbRetryHelper } from '../../common/helpers/db-retry.helper';
+import { CodeGeneratorService } from '../../common/services/code-generator.service';
 import { MstStrategy } from './entities/mst_strategy.entity';
 import { MstStrategyGroup } from './entities/mst_strategy_group.entity';
-import { StrategyGroupResponseDto ,GetStrategyByGroupResponseDto} from './dto/strategy-group-response.dto';
-import { CreateStrategyResponseDto} from './dto/strategy-create-response.dto';
+
+import { XCreateStrategyGroupDto } from './dto/y-create-strategy-group.dto';
+import { XStrategyGroupResponseDto } from './dto/y-strategy-group-response.dto';
+import { XUpdateStrategyGroupDto } from './dto/y-update-strategy-group.dto';
+
+import { XtrategyListResponseDto } from './dto/y-strategy-list-response.dto';
+import { XCreateStrategyDto } from './dto/y-create-strategy.dto';
+import { XUpdateStrtegyDto } from './dto/y-update-strategy.dto';
 
 @Injectable()
 export class StrategyService {
-  constructor(
-    @InjectRepository(MstStrategy)
-    private readonly strategyRepo: Repository<MstStrategy>,
 
+
+  constructor(
     @InjectRepository(MstStrategyGroup)
     private readonly strategyGroupRepo: Repository<MstStrategyGroup>,
-  ) {}
+    @InjectRepository(MstStrategy)
+    private readonly strategyRepo: Repository<MstStrategy>,
+    private readonly dbRetryHelper: DbRetryHelper,
+    private readonly codeGenerator: CodeGeneratorService,
+  ) { }
 
-async createStrategyGroup(code: string, description: string) {
-    const exists = await this.strategyGroupRepo.findOne({
-      where: { code },
+
+  async findAllStrategyGroup(): Promise<XStrategyGroupResponseDto[]> {
+    const groups = await this.strategyGroupRepo.find({
+      order: { id: 'ASC' },
+    });
+    return groups.map((g) => ({
+      id: g.id,
+      code: g.code,
+      description: g.description,
+    }));
+  }
+  async createStrategyGroup(dto: XCreateStrategyGroupDto): Promise<XStrategyGroupResponseDto> {
+    const { description: descFromDto } = dto;
+    return this.dbRetryHelper.onUnique(async () => {
+
+      const lastRecord = await this.strategyGroupRepo.find({
+        order: { id: 'DESC' },
+        take: 1,
+      });
+      const lastCode = lastRecord[0]?.code;
+      const runningCode = this.codeGenerator.generateByType("STRATEGYGROUP", lastCode)
+      const entity = this.strategyGroupRepo.create({
+        code: runningCode,
+        description: descFromDto,
+      })
+      const saved = await this.strategyGroupRepo.save(entity);
+      return {
+        id: saved.id,
+        code: saved.code,
+        description: saved.description,
+      };
+    });
+  }
+  async updateStrategyGroup(
+    xid: number, dto: XUpdateStrategyGroupDto): Promise<XStrategyGroupResponseDto> {
+    const entity = await this.strategyGroupRepo.findOne({
+      where: { id: xid },
+    });
+    if (!entity) {
+      throw new NotFoundException('kpi simple group not found');
+    }
+    const { description } = dto;
+    if (description !== undefined) {
+      entity.description = description;
+    }
+    // 3. save
+    const saved = await this.strategyGroupRepo.save(entity);
+    return {
+      id: saved.id,
+      code: saved.code,
+      description: saved.description,
+    };
+  }
+
+  async createStrategy(dto: XCreateStrategyDto): Promise<XtrategyListResponseDto> {
+    const { description, mst_strategy_group_id } = dto;
+    return this.dbRetryHelper.onUnique(async () => {
+
+      const lastRecord = await this.strategyRepo.find({
+        order: { id: 'DESC' },
+        take: 1,
+      });
+      const lastCode = lastRecord[0]?.code;
+      const runningCode = this.codeGenerator.generateByType("STRATEGY", lastCode)
+      const entity = this.strategyRepo.create({
+        code: runningCode,
+        description,
+        mst_strategy_group_id: mst_strategy_group_id,
+      });
+      const saved = await this.strategyRepo.save(entity);
+      const group = await this.strategyGroupRepo.findOne({
+        where: { id: mst_strategy_group_id },
+      });
+      if (!group) {
+        throw new NotFoundException('Service unit group not found');
+      }
+      return {
+        kpistrategyGroup: {
+          id: group.id,
+          code: group.code,
+          description: group.description,
+          kpiStrategies: [
+            {
+              id: saved.id,
+              code: saved.code,
+              description: saved.description,
+              is_active: saved.is_active,
+            },
+          ],
+        },
+      };
+    });
+  }
+
+  async getStrategyGroupId(groupId: number): Promise<XtrategyListResponseDto> {
+
+    const group = await this.strategyGroupRepo.findOne({
+      where: { id: groupId },
     });
 
-    if (exists) {
-      throw new BadRequestException('Strategy group code already exists');
+    if (!group) {
+      throw new NotFoundException('kpi simple group not found');
     }
 
-    const entity = this.strategyGroupRepo.create({
-      code,
-      description,
+    const kpisimple = await this.strategyRepo.find({
+      where: { mst_strategy_group_id: groupId },
+      order: { id: 'ASC' },
     });
 
-    return this.strategyGroupRepo.save(entity);
+    return {
+      kpistrategyGroup: {
+        id: group.id,
+        code: group.code,
+        description: group.description,
+        kpiStrategies: kpisimple.map((s) => ({
+          id: s.id,
+          code: s.code,
+          description: s.description,
+          is_active: s.is_active,
+        })),
+      },
+    };
   }
+  async updateStrategy(
+    xid: number,
+    dto: XUpdateStrtegyDto,
+  ): Promise<XtrategyListResponseDto> {
+    // 1. หา record + relation
+    const entity = await this.strategyRepo.findOne({
+      where: { id: xid },
+      relations: ['strategyGroup'],
+    });
 
-  async createStrategy(
-  description: string,
-  groupId: number,
-): Promise<CreateStrategyResponseDto> {
-  const group = await this.strategyGroupRepo.findOne({
-    where: { id: groupId },
-  });
+    if (!entity) {
+      throw new NotFoundException('KPI Strategy not found');
+    }
 
-  if (!group) {
-    throw new NotFoundException('Strategy group not found');
+    // 2. update field
+    const { description, is_active } = dto;
+
+    if (description !== undefined) {
+      entity.description = description;
+    }
+
+    if (typeof is_active === 'boolean') {
+      entity.is_active = is_active;
+    }
+
+    // 3. save
+    const saved = await this.strategyRepo.save(entity);
+
+    // 4. หา group
+
+    const group = await this.strategyGroupRepo.findOne({
+      where: { id: entity.mst_strategy_group_id },
+    });
+
+    if (!group) {
+      throw new NotFoundException('KPI Strategy not found');
+    }
+
+    // 5. return เฉพาะตัวที่ update
+    return {
+      kpistrategyGroup: {
+        id: group.id,
+        code: group.code,
+        description: group.description,
+        kpiStrategies: [
+          {
+            id: saved.id,
+            code: saved.code,
+            description: saved.description,
+            is_active: saved.is_active,
+          },
+        ],
+      },
+    };
   }
-
-  const lastStrategy = await this.strategyRepo
-    .createQueryBuilder('s')
-    .where('s.mst_strategy_group_id = :groupId', { groupId })
-    .orderBy('s.id', 'DESC')
-    .getOne();
-
-  let nextNumber = 1;
-
-  if (lastStrategy?.code) {
-    const parts = lastStrategy.code.split('-');
-    nextNumber = parseInt(parts[1] || '0', 10) + 1;
-  }
-
-  const code = `${group.code}-${String(nextNumber).padStart(3, '0')}`;
-
-  const entity = this.strategyRepo.create({
-    code,
-    description,
-    strategyGroup: group,
-  });
-
-  const saved = await this.strategyRepo.save(entity);
-
-  // 🔥 MAP RESPONSE (สำคัญ)
-  return {
-    strategyGroup: {
-      id: group.id,
-      code: group.code,
-      description: group.description,
-    },
-    id: saved.id,
-    code: saved.code,
-    description: saved.description,
-    mst_strategy_group_id: saved.mst_strategy_group_id,
-    is_active: saved.is_active,
-  };
 }
 
-  async getStrategyGroups(): Promise<MstStrategyGroup[]> {
-  return this.strategyGroupRepo.find({
-    order: { id: 'ASC' },
-  });
-}
-async getStrategies(): Promise<MstStrategy[]> {
-  return this.strategyRepo.find({
-    relations: ['strategyGroup'], // ⭐ สำคัญ
-    order: { id: 'ASC' },
-  });
-}
-async getStrategiesByGroupId(groupId: number): Promise<GetStrategyByGroupResponseDto> {
-  const strategies = await this.strategyRepo.find({
-    where: { mst_strategy_group_id: groupId },
-    relations: ['strategyGroup'],
-    order: { id: 'ASC' },
-  });
-/*
-  if (!strategies.length) {
-    return { strategyGroup: null };
-  }*/
-
-  const group = strategies[0].strategyGroup;
-
-  return {
-    strategyGroup: {
-      id: group.id,
-      code: group.code,
-      description: group.description,
-      strategies: strategies.map((s) => ({
-        id: s.id,
-        code: s.code,
-        description: s.description,
-        is_active: s.is_active,
-      })),
-    },
-  };
-}
-}

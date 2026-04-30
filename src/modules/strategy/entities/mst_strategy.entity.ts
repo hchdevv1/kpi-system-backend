@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import {MstStrategyGroup} from './mst_strategy_group.entity'
 @Entity({ name: 'mst_strategy' })
-@Index(['code', 'mst_strategy_group_id'], { unique: true }) // ✅ FIX ตรงนี้
+@Index(['code', 'mst_strategy_group_id'], { unique: true }) 
 export class MstStrategy {
   @PrimaryGeneratedColumn()
   id!: number;

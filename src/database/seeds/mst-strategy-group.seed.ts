@@ -19,9 +19,9 @@ async function seed() {
   const repo = AppDataSource.getRepository(MstStrategyGroup);
 
   const data = [
-    { id: 1, code: 'SG001', description: 'Strategy' },
-    { id: 2, code: 'SG002', description: 'Strategy Object' },
-    { id: 3, code: 'SG003', description: 'Goal' },
+    { id: 1, code: 'STG001', description: 'Strategy' },
+    { id: 2, code: 'STG002', description: 'Strategy Object' },
+    { id: 3, code: 'STG003', description: 'Goal' },
   ];
 
   for (const item of data) {
@@ -34,10 +34,10 @@ async function seed() {
     }
   }
 
-  console.log('✅ Seed mst_strategy_group done');
+  console.log('Seed mst_strategy_group done');
   await AppDataSource.destroy();
 }
 
 seed().catch((err) => {
-  console.error('❌ Seed failed', err);
+  console.error('Seed failed', err);
 });

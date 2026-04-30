@@ -1,82 +1,96 @@
-import { Controller, Get, ParseIntPipe ,Post, Body, Patch, Param, Delete } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+
+import { Controller, Get, Post, ParseIntPipe, Body, Patch, Param } from '@nestjs/common';
 import { StrategyService } from './strategy.service';
 
-import { CreateStrategyDto } from './dto/create-strategy.dto';
-import { CreateStrategyGroupDto } from './dto/create-strategy-group.dto';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { GetStrategyByGroupResponseDto} from './dto/strategy-group-response.dto';
+import { ApiParam, ApiOperation, ApiResponse, ApiNotFoundResponse } from '@nestjs/swagger';
+import { ResponseMessage } from 'src/common/decorators/response-message.decorator';
+import { ApiBaseResponse } from 'src/common/decorators/api-response.decorator';
 
-@ApiTags('Strategy')
-@Controller('strategy')
+import {XCreateStrategyGroupDto} from './dto/y-create-strategy-group.dto';
+import {XStrategyGroupResponseDto} from './dto/y-strategy-group-response.dto';
+import {XUpdateStrategyGroupDto }from './dto/y-update-strategy-group.dto';
+
+import { XtrategyListResponseDto} from './dto/y-strategy-list-response.dto';
+import { XCreateStrategyDto } from './dto/y-create-strategy.dto';
+import { XUpdateStrtegyDto} from './dto/y-update-strategy.dto';
+@Controller('kpi-Strategy')
 export class StrategyController {
-  constructor(private readonly strategyService: StrategyService) {}
+  constructor(private readonly strategyService: StrategyService) { }
 
-  // 🔹 create group
-  @Post('group')
-  @ApiOperation({ summary: 'Create strategy group' })
-  @ApiResponse({ status: 201, description: 'Created successfully' })
-  async createGroup(@Body() dto: CreateStrategyGroupDto) {
-    const result = await this.strategyService.createStrategyGroup(dto.code,dto.description,);
 
-    return {
-      success: true,
-      message: 'Create strategy group success',
-      data: result,
-    };
-  }
-    // 🔹 create strategy
-  @Post()
-  @ApiOperation({ summary: 'Create strategy' })
-  @ApiResponse({ status: 201, description: 'Created successfully' })
-  async create(@Body() dto: CreateStrategyDto) {
-    const result = await this.strategyService.createStrategy(
+   @Post('/group')
+    @ApiOperation({ summary: '[ Create kpi strategy group  ]' })
+    @ApiBaseResponse(XStrategyGroupResponseDto)
+    @ResponseMessage('Create kpi strategy group success')
+    async createSimpleGroup(
+      @Body() dto: XCreateStrategyGroupDto,
+    ): Promise<XStrategyGroupResponseDto> {
   
-      dto.description,
-      dto.mst_strategy_group_id,
-    );
+      return await this.strategyService.createStrategyGroup(dto);
+    }
 
-    return {
-      success: true,
-      message: 'Create strategy success',
-      data: result,
-    };
+  @Get('/group')
+  @ApiOperation({ summary: '[ Get all kpi strategy group ]' })
+  @ApiBaseResponse(XStrategyGroupResponseDto, { isArray: true })
+  @ResponseMessage('Get all kpi strategy group success')
+  async findAllSimpleGroup(): Promise<XStrategyGroupResponseDto[]> {
+    return await this.strategyService.findAllStrategyGroup();
   }
 
-@Get('group')
-@ApiOperation({ summary: 'Get strategy groups' })
-async getGroups() {
-  const result = await this.strategyService.getStrategyGroups();
+  @Patch('/group/:id')
+  @ApiOperation({ summary: '[ Update kpi strategy group ]' })
+  @ApiBaseResponse(XStrategyGroupResponseDto)
+  @ResponseMessage('Update kpi strategy group success')
+  async updateSimpleGroup(@Param('id') xid: number
+    , @Body() dto: XUpdateStrategyGroupDto): Promise<XStrategyGroupResponseDto> {
 
-  return {
-    success: true,
-    message: 'Get strategy groups success',
-    data: result,
-  };
-}
-@Get()
-@ApiOperation({ summary: 'Get strategies' })
-async getAll() {
-  const result = await this.strategyService.getStrategies();
+    return await this.strategyService.updateStrategyGroup(xid, dto)
+  }
 
-  return {
-    success: true,
-    message: 'Get strategies success',
-    data: result,
-  };
+
+   @Post('details')
+    @ApiOperation({ summary: '[ Create kpi strategy detail ]' })
+    @ApiBaseResponse(XtrategyListResponseDto)
+    @ResponseMessage('Create kpi strategy detail success')
+    async createServiceUnit(
+      @Body() dto: XCreateStrategyDto,
+    ): Promise<XtrategyListResponseDto> {
+  
+      return await this.strategyService.createStrategy(dto);
+    }
+  
+    
+  @Get('details/:groupId')
+  @ApiOperation({ summary: '[ Get kpi strategy detail by group id ]' })
+  @ApiParam({
+    name: 'groupId',
+    type: Number,
+    example: 1,
+  })
+  @ApiBaseResponse(XtrategyListResponseDto)
+  @ApiNotFoundResponse({ description: '[ kpi strategy detail group not found ]' })
+  @ResponseMessage('Get kip strategy detail by group success')
+  async getByGroupId(
+    @Param('groupId', ParseIntPipe) groupId: number,
+  ) {
+    return await this.strategyService.getStrategyGroupId(groupId);
+  }
+
+    @Patch('/details/:id')
+    @ApiOperation({ summary: '[ Update kpi strategy detail ]' })
+    @ApiBaseResponse(XtrategyListResponseDto)
+    @ResponseMessage('Update kpi strategy detail success')
+    async updateStrategy(@Param('id') xid: number
+      , @Body() dto: XUpdateStrtegyDto): Promise<XtrategyListResponseDto> {
+  
+      return await this.strategyService.updateStrategy(xid, dto)
+    }
+
+
 }
 
-@Get('group/:groupId')
-@ApiOperation({ summary: 'Get strategies by group id' })
-@ApiResponse({ type: GetStrategyByGroupResponseDto })
-async getByGroupId(
-  @Param('groupId', ParseIntPipe) groupId: number,
-) {
-  const result = await this.strategyService.getStrategiesByGroupId(groupId);
 
-  return {
-    success: true,
-    message: 'Get strategies by group success',
-    data: result,
-  };
-}
-}
+
+
+

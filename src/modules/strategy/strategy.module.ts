@@ -4,6 +4,7 @@ import { StrategyController } from './strategy.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MstStrategy } from './entities/mst_strategy.entity';
 import { MstStrategyGroup } from './entities/mst_strategy_group.entity';
+import { CommonModule } from '../../common/common.module';
 
 
 @Module({
@@ -12,6 +13,7 @@ import { MstStrategyGroup } from './entities/mst_strategy_group.entity';
       MstStrategy,
       MstStrategyGroup,
     ]),
+    CommonModule
   ],
   controllers: [StrategyController],
   providers: [StrategyService],
