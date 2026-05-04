@@ -19,6 +19,12 @@ import { MstSimple } from '../modules/kpi-simple/entities/mst_simple.entity';
 import { MstKpiRoles } from '../modules/roles/entities/utils_kpi_roles.entity';
 import { MstSystemRoles } from '../modules/roles/entities/utils_system_roles.entity';
 import { UserSystem } from '../modules/users/entities/users.entity';
+
+import { KpiDirectory } from '../modules/kpi/kpi-directory/entities/kpi_directory.entity';
+import { KpiResults } from '../modules/kpi/kpi-results/entities/kpi_results.entity';
+import { KpiUserRoles } from '../modules/kpi/kpi-user-roles/entities/kpi_user_roles.entity';
+import { KpiServiceUnits } from '../modules/kpi/kpi_service_units/entities/kpi_service_units.entity';
+import { KpiSimpleMappings } from '../modules/kpi/kpi_simple_mappings/entities/kpi_simple_mappings.entity';
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({
@@ -30,7 +36,7 @@ import { UserSystem } from '../modules/users/entities/users.entity';
         username: config.get<string>('DB_USER'),
         password: config.get<string>('DB_PASS'),
         database: config.get<string>('DB_NAME'),
-        entities: [
+       entities: [
           MstKpiRoles, MstSystemRoles,
           MstStrategy, MstStrategyGroup,
           MstOrganization, MstOrganizationGroup,
@@ -39,8 +45,13 @@ import { UserSystem } from '../modules/users/entities/users.entity';
           MstConditionOperator, MstUnit,
           MstServiceUnitGroup, MstServiceUnit,
           MstSimpleGroup, MstSimple,
-          UserSystem],
+          UserSystem,
+          KpiDirectory,
+          KpiResults, KpiUserRoles,
+          KpiServiceUnits, KpiSimpleMappings
+        ],
         //entities: [__dirname + '/entities/*.entity{.ts,.js}'],
+        
         //autoLoadEntities:true, //auto load entities
         synchronize: false, // 
         logging: true,

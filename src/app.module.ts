@@ -18,6 +18,9 @@ import { RolesModule } from './modules/roles/roles.module';
 import { KpiUserRolesModule } from './modules/kpi/kpi-user-roles/kpi-user-roles.module';
 import { KpiResultsModule } from './modules/kpi/kpi-results/kpi-results.module';
 import { KpiDirectoryModule } from './modules/kpi/kpi-directory/kpi-directory.module';
+import { KpiServiceUnitsModule } from './modules/kpi/kpi_service_units/kpi_service_units.module';
+import { KpiSimpleMappingsModule } from './modules/kpi/kpi_simple_mappings/kpi_simple_mappings.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [ ConfigModule.forRoot({
@@ -39,6 +42,9 @@ import { KpiDirectoryModule } from './modules/kpi/kpi-directory/kpi-directory.mo
     KpiUserRolesModule,
     KpiResultsModule,
     KpiDirectoryModule,
+    KpiServiceUnitsModule,
+    KpiSimpleMappingsModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
