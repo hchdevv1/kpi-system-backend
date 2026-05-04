@@ -8,6 +8,7 @@ import 'dotenv/config';
 import { LoginDto } from './dto/login.dto';
 import { UserSystem } from '../users/entities/users.entity';
 
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -53,6 +54,7 @@ export class AuthService {
       userId: user.id,
       usercode: user.usercode,
       userName: logon.LogOnUserName,
+      usersystem_role_id: user.usersystem_role_id
     };
   }
 }
