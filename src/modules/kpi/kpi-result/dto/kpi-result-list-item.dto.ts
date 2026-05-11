@@ -124,6 +124,9 @@ export class UserUpdateDto {
 
   @ApiPropertyOptional()
   roleId?: number;
+  
+  @ApiPropertyOptional()
+roleDescription?: string;
 }
 
 //

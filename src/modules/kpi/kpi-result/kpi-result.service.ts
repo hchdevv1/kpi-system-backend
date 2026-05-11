@@ -8,10 +8,11 @@ import { KpiDataEntry } from '../kpi-data-entry/entities/kpi-data-entry.entity';
 
 import { QueryKpiResultDto } from './dto/query-kpi-result.dto';
 import { KpiResultMapper } from './mappers/kpi-result.mapper';
+import { KpiUserRolesMappings } from '../kpi-user-roles-mappings/entities/kpi_user_roles_mappings.entity';
 
 @Injectable()
 export class KpiResultService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(private readonly dataSource: DataSource) { }
 
   async findAll(query: QueryKpiResultDto) {
     const {
@@ -129,6 +130,13 @@ export class KpiResultService {
     // FETCH LATEST DATA ENTRY (IMPORTANT FIX)
     // =========================
     const latestMap = new Map<number, KpiDataEntry>();
+    const userRoleMap = new Map<
+      string,
+      {
+        roleId: number;
+        roleDescription: string;
+      }
+    >();
     const userMap = new Map<number, any>();
 
     if (kpiIds.length > 0) {
@@ -163,6 +171,40 @@ export class KpiResultService {
               roleId: null, // ถ้ายังไม่มี relation role ใน user entity
             });
           }
+          // =========================
+// FETCH USER ROLE MAPPING
+// =========================
+
+const updatedUserIds = entries
+  .map((e) => e.updatedBy)
+  .filter(Boolean);
+
+if (updatedUserIds.length > 0) {
+  const roleMappings = await this.dataSource
+    .getRepository(KpiUserRolesMappings)
+    .createQueryBuilder('kur')
+
+    .leftJoinAndSelect('kur.role', 'role')
+
+    .where('kur.kpi_id IN (:...kpiIds)', {
+      kpiIds,
+    })
+
+    .andWhere('kur.user_id IN (:...userIds)', {
+      userIds: updatedUserIds,
+    })
+
+    .getMany();
+
+  for (const mapping of roleMappings) {
+    const key = `${mapping.kpiId}-${mapping.userId}`;
+
+    userRoleMap.set(key, {
+      roleId: mapping.roleId,
+      roleDescription: mapping.role.description,
+    });
+  }
+}
         }
       }
     }
@@ -173,7 +215,7 @@ export class KpiResultService {
     const items = KpiResultMapper.toResponseList(
       kpis,
       latestMap,
-      userMap,
+      userRoleMap,
     );
 
     return {

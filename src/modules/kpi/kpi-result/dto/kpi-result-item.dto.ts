@@ -94,6 +94,7 @@ export class KpiResultItemDto {
     usercode: string;
     description: string;
     roleId: number;
+   
   };
 
   // =========================
