@@ -38,4 +38,8 @@ async function bootstrap() {
   SwaggerModule.setup('docs', app, document);
   await app.listen(process.env.PORT ?? 3113);
 }
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('Error starting server:', err);
+  process.exit(1); // ปิด Process หาก Start ไม่สำเร็จ
+});
+
