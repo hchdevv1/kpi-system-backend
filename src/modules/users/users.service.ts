@@ -14,8 +14,12 @@ import { DbRetryHelper } from '../../common/helpers/db-retry.helper';
 import { UserTrakcareResponseDto } from './dto/user-trakcare-response.dto';
 import { CreateUserSystemDto } from './dto/create-user-system.dto';
 import { UserSystemResponseDto } from './dto/create-user-system-response.dto';
+import { PagingQueryDto } from './dto/pagination-topic.dto';
 
 import { UserSystem } from './entities/users.entity';
+import { UserListResponseDto } from './dto/userlist-response-pagination.dto';
+import {UpdateUserSystemDto} from './dto/update-user-system.dto';
+import {UserResponseDto} from './dto/user-system-response';
 @Injectable()
 export class UsersService {
   constructor(
@@ -72,5 +76,67 @@ export class UsersService {
       })),
     };
   }
+  async findAll(query: PagingQueryDto): Promise<UserListResponseDto> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const skip = (page - 1) * limit;
+    const qb = this.userSystemRepo.createQueryBuilder('t');
+
+    const [data, total] = await qb
+      .orderBy('t.id', 'ASC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+  
+    
+    return {
+      UserInfo: data.map((g) => ({
+        id :g.id,
+        usercode: g.usercode,
+        description: g.description,
+        usersystem_role_id: g.usersystem_role_id,
+         roleDescription:g.usersystem_role_id === 1 ? 'admin' : 'user',
+         is_active:g.is_active
+
+      })),
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+  async updateConditionOperator(
+      xid: number, dto: UpdateUserSystemDto): Promise<UserResponseDto> {
+  
+      // 1. หา record
+      const entity = await this.userSystemRepo.findOne({
+        where: { id: xid },
+      });
+      if (!entity) {
+        throw new NotFoundException('condition-operator not found');
+      }
+   
+      const {  is_active,usersystem_role_id } = dto;
+      
+       if (usersystem_role_id !== undefined) {
+        entity.usersystem_role_id = usersystem_role_id;
+      }
+      if (typeof is_active === 'boolean') {
+        entity.is_active = is_active;
+      }
+   
+      const saved = await this.userSystemRepo.save(entity);
+  
+      return {
+        id: saved.id,
+        usercode: saved.usercode,
+        description: saved.description,
+        usersystem_role_id:saved.usersystem_role_id,
+        roleDescription:saved.usersystem_role_id === 1 ? 'admin' : 'user',
+        is_active: saved.is_active
+      };
+    }
 
 }
