@@ -121,6 +121,9 @@ export class UserRoleResponseDto {
   @ApiProperty()
   userId!: number;
 
+  @ApiProperty({ example: 'Mr XX XXXX' })
+  description?: string;
+
   @ApiProperty()
   roleId!: number;
 }

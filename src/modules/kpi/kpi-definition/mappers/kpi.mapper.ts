@@ -76,6 +76,7 @@ export class KpiMapper {
       userRoles:
         entity.userRoles?.map((ur) => ({
           userId: ur.user?.id,
+          description: ur.user?.description,
           roleId: ur.role?.id,
         })) ?? [],
 
@@ -235,6 +236,7 @@ export class KpiMapper {
       userRoles:
         entity.userRoles?.map((m) => ({
           userId: m.user.id,
+          description: m.user.description ?? '',
           roleId: m.role.id,
         })) ?? [],
 

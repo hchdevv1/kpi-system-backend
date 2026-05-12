@@ -39,7 +39,8 @@
     "seed:strategy": "ts-node src/database/seeds/mst-strategy.seed.ts",
     "seed:kpi-roles": "ts-node src/database/seeds/mst-utils_kpi_roles.ts",
     "seed:system-roles": "ts-node src/database/seeds/mst-utils_system_roles.ts",
-    "seed:master": "npm run seed:organization && npm run seed:organization-group && npm run seed:measure-category && npm run seed:benchmark && npm run seed:topic && npm run seed:frequency && npm run seed:condition-operator && npm run seed:kpi-unit && npm run seed:serviceunit-group && npm run seed:serviceunit && npm run seed:simple-group && npm run seed:simple && npm run seed:strategy-group && npm run seed:strategy && npm run seed:kpi-roles && npm run seed:system-roles"
+    "seed:master": "npm run seed:organization && npm run seed:organization-group && npm run seed:measure-category && npm run seed:benchmark && npm run seed:topic && npm run seed:frequency && npm run seed:condition-operator && npm run seed:kpi-unit && npm run seed:serviceunit-group && npm run seed:serviceunit && npm run seed:simple-group && npm run seed:simple && npm run seed:strategy-group && npm run seed:strategy && npm run seed:kpi-roles && npm run seed:system-roles",
+    "seed-master-table": "npm run seed:strategy-group && npm run seed:organization-group && npm run seed:measure-category && npm run seed:frequency && npm run seed:condition-operator && npm run seed:kpi-unit && npm run seed:serviceunit-group && npm run seed:simple-group && npm run seed:kpi-roles &&  npm run seed:system-roles"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",

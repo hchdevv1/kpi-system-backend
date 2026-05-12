@@ -458,6 +458,7 @@ export class KpiDefinitionService {
         manager.create(KpiUserRolesMappings, {
           kpiId: id,
           userId: r.userId,
+          description:'r.userId',
           roleId: r.roleId,
         }),
       );
