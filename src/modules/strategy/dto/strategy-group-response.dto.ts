@@ -2,14 +2,14 @@
 
 import { ApiProperty } from '@nestjs/swagger';
 
-export class XOrganizationGroupResponseDto {
+export class StrategyGroupResponseDto {
   @ApiProperty({ example: 1 })
   id!: number;
 
-  @ApiProperty({ example: 'OGG001' })
+  @ApiProperty({ example: 'STG001' })
   code!: string;
 
-  @ApiProperty({ example: 'Main' })
+  @ApiProperty({ example: 'Strategy' })
   description!: string;
 
 }

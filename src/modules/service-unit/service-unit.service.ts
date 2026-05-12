@@ -14,7 +14,7 @@ import { UpdateServiceUnitGroupDto } from './dto/update-service-unit-group.dto';
 import { ServiceUnitListResponseDto } from './dto/service-unit-list-response.dto';
 import { CreateServiceUnitDto } from './dto/create-service-unit.dto';
 import { UpdateServiceUnitDto } from './dto/update-service-unit.dto';
-
+import { validateRefExists } from '../../common/helpers/validate-ref.helper';
 @Injectable()
 export class ServiceUnitService {
   constructor(
@@ -89,26 +89,29 @@ export class ServiceUnitService {
   async createServiceUnit(dto: CreateServiceUnitDto): Promise<ServiceUnitListResponseDto> {
     const { description, service_unit_group_id } = dto;
     return this.dbRetryHelper.onUnique(async () => {
-
+      await validateRefExists(
+        this.serviceUnitRepo.manager,
+        MstServiceUnitGroup,
+        service_unit_group_id,
+        'Service unit group',
+      );
       const lastRecord = await this.serviceUnitRepo.find({
         order: { id: 'DESC' },
         take: 1,
       });
       const lastCode = lastRecord[0]?.code;
       const runningCode = this.codeGenerator.generateByType("SERVICEUNIT", lastCode)
+
       const entity = this.serviceUnitRepo.create({
         code: runningCode,
         description,
-        serviceUnitGroup: { id: service_unit_group_id }, // ✅ ใช้ relation object
+        serviceUnitGroup: { id: service_unit_group_id },
       });
       const saved = await this.serviceUnitRepo.save(entity);
-      const group = await this.serviceUnitGroupRepo.findOne({
-        where: { id: service_unit_group_id },
-        relations: ['serviceUnits'], // 👈 ชื่อ field ต้องตรง entity
-      });
-      if (!group) {
-        throw new NotFoundException('Service unit group not found');
-      }
+      const group =
+        await this.serviceUnitGroupRepo.findOneOrFail({
+          where: { id: service_unit_group_id },
+        });
       return {
         serviceunitGroup: {
           id: group.id,
@@ -126,47 +129,6 @@ export class ServiceUnitService {
       };
     });
   }
-
-  /*
-  async createServiceUnit(dto: CreateServiceUnitDto): Promise<ServiceUnitListResponseDto> {
-    const { description, service_unit_group_id } = dto;
-    return this.dbRetryHelper.onUnique(async () => {
-
-      const lastRecord = await this.serviceUnitRepo.find({
-        order: { id: 'DESC' },
-        take: 1,
-      });
-      const lastCode = lastRecord[0]?.code;
-      const runningCode = this.codeGenerator.generateByType("SERVICEUNIT", lastCode)
-       const entity = this.serviceUnitRepo.create({
-      code:runningCode,
-      description,
-      serviceUnitGroup: { id: service_unit_group_id }, // ✅ ใช้ relation object
-    });
-     
-      const group = await this.serviceUnitGroupRepo.findOne({
-        where: { id: service_unit_group_id },
-        relations: ['serviceUnits'], // 👈 ชื่อ field ต้องตรง entity
-      });
- if (!group) {
-      throw new NotFoundException('Service unit group not found');
-    }
-     return {
-      serviceunitGroup: {
-        id: group.id,
-        code: group.code,
-        description: group.description,
-        serviceunit: (group.serviceUnits ?? []).map((su) => ({
-          id: su.id,
-          code: su.code,
-          description: su.description,
-          is_active: su.is_active,
-        })),
-      },
-    };
-  });
-  }
-  */
   async getServiceUnitByGroupId(groupId: number): Promise<ServiceUnitListResponseDto> {
 
     const group = await this.serviceUnitGroupRepo.findOne({
@@ -198,60 +160,40 @@ export class ServiceUnitService {
     };
   }
   async updateServiceUnit(
-  xid: number,
-  dto: UpdateServiceUnitDto,
-): Promise<ServiceUnitListResponseDto> {
+    xid: number,
+    dto: UpdateServiceUnitDto,
+  ): Promise<ServiceUnitListResponseDto> {
 
-  // 1. หา record + relation
-  const entity = await this.serviceUnitRepo.findOne({
-    where: { id: xid },
-    relations: ['serviceUnitGroup'],
-  });
+    const entity = await this.serviceUnitRepo.findOne({
+      where: { id: xid },
+      relations: ['serviceUnitGroup'],
+    });
+    if (!entity) {
+      throw new NotFoundException(`Service unit (${xid}) not found`);
+    }
 
-  if (!entity) {
-    throw new NotFoundException('Service unit not found');
+    const { description, is_active } = dto;
+    if (description !== undefined) {
+      entity.description = description;
+    }
+    if (typeof is_active === 'boolean') {
+      entity.is_active = is_active;
+    }
+    const saved = await this.serviceUnitRepo.save(entity);
+    return {
+      serviceunitGroup: {
+        id: entity.serviceUnitGroup.id,
+        code: entity.serviceUnitGroup.code,
+        description: entity.serviceUnitGroup.description,
+        serviceunit: [
+          {
+            id: saved.id,
+            code: saved.code,
+            description: saved.description,
+            is_active: saved.is_active,
+          },
+        ],
+      },
+    };
   }
-
-  // 2. update field
-  const { description, is_active } = dto;
-
-  if (description !== undefined) {
-    entity.description = description;
-  }
-
-  if (typeof is_active === 'boolean') {
-    entity.is_active = is_active;
-  }
-
-  // 3. save
-  const saved = await this.serviceUnitRepo.save(entity);
-
-  // 4. หา group
-  const groupId = entity.serviceUnitGroup?.id;
-
-  const group = await this.serviceUnitGroupRepo.findOne({
-    where: { id: groupId },
-  });
-
-  if (!group) {
-    throw new NotFoundException('Service unit group not found');
-  }
-
-  // 5. return เฉพาะตัวที่ update
-  return {
-    serviceunitGroup: {
-      id: group.id,
-      code: group.code,
-      description: group.description,
-      serviceunit: [
-        {
-          id: saved.id,
-          code: saved.code,
-          description: saved.description,
-          is_active: saved.is_active,
-        },
-      ],
-    },
-  };
-}
 }

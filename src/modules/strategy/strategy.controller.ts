@@ -7,13 +7,13 @@ import { ApiParam, ApiOperation, ApiResponse, ApiNotFoundResponse } from '@nestj
 import { ResponseMessage } from 'src/common/decorators/response-message.decorator';
 import { ApiBaseResponse } from 'src/common/decorators/api-response.decorator';
 
-import {XCreateStrategyGroupDto} from './dto/y-create-strategy-group.dto';
-import {XStrategyGroupResponseDto} from './dto/y-strategy-group-response.dto';
-import {XUpdateStrategyGroupDto }from './dto/y-update-strategy-group.dto';
+import {CreateStrategyGroupDto} from './dto/create-strategy-group.dto';
+import {StrategyGroupResponseDto} from './dto/strategy-group-response.dto';
+import {UpdateStrategyGroupDto }from './dto/update-strategy-group.dto';
 
-import { XtrategyListResponseDto} from './dto/y-strategy-list-response.dto';
-import { XCreateStrategyDto } from './dto/y-create-strategy.dto';
-import { XUpdateStrtegyDto} from './dto/y-update-strategy.dto';
+import { StrategyListResponseDto} from './dto/strategy-list-response.dto';
+import { CreateStrategyDto } from './dto/create-strategy.dto';
+import { UpdateStrtegyDto} from './dto/update-strategy.dto';
 @Controller('kpi-Strategy')
 export class StrategyController {
   constructor(private readonly strategyService: StrategyService) { }
@@ -21,29 +21,29 @@ export class StrategyController {
 
    @Post('/group')
     @ApiOperation({ summary: '[ Create kpi strategy group  ]' })
-    @ApiBaseResponse(XStrategyGroupResponseDto)
+    @ApiBaseResponse(StrategyGroupResponseDto)
     @ResponseMessage('Create kpi strategy group success')
     async createSimpleGroup(
-      @Body() dto: XCreateStrategyGroupDto,
-    ): Promise<XStrategyGroupResponseDto> {
+      @Body() dto: CreateStrategyGroupDto,
+    ): Promise<StrategyGroupResponseDto> {
   
       return await this.strategyService.createStrategyGroup(dto);
     }
 
   @Get('/group')
   @ApiOperation({ summary: '[ Get all kpi strategy group ]' })
-  @ApiBaseResponse(XStrategyGroupResponseDto, { isArray: true })
+  @ApiBaseResponse(StrategyGroupResponseDto, { isArray: true })
   @ResponseMessage('Get all kpi strategy group success')
-  async findAllSimpleGroup(): Promise<XStrategyGroupResponseDto[]> {
+  async findAllStrategyGroup(): Promise<StrategyGroupResponseDto[]> {
     return await this.strategyService.findAllStrategyGroup();
   }
 
   @Patch('/group/:id')
   @ApiOperation({ summary: '[ Update kpi strategy group ]' })
-  @ApiBaseResponse(XStrategyGroupResponseDto)
+  @ApiBaseResponse(StrategyGroupResponseDto)
   @ResponseMessage('Update kpi strategy group success')
-  async updateSimpleGroup(@Param('id') xid: number
-    , @Body() dto: XUpdateStrategyGroupDto): Promise<XStrategyGroupResponseDto> {
+  async updateStrategyGroup(@Param('id') xid: number
+    , @Body() dto: UpdateStrategyGroupDto): Promise<StrategyGroupResponseDto> {
 
     return await this.strategyService.updateStrategyGroup(xid, dto)
   }
@@ -51,11 +51,11 @@ export class StrategyController {
 
    @Post('details')
     @ApiOperation({ summary: '[ Create kpi strategy detail ]' })
-    @ApiBaseResponse(XtrategyListResponseDto)
+    @ApiBaseResponse(StrategyListResponseDto)
     @ResponseMessage('Create kpi strategy detail success')
-    async createServiceUnit(
-      @Body() dto: XCreateStrategyDto,
-    ): Promise<XtrategyListResponseDto> {
+    async createStrategy(
+      @Body() dto: CreateStrategyDto,
+    ): Promise<StrategyListResponseDto> {
   
       return await this.strategyService.createStrategy(dto);
     }
@@ -68,10 +68,10 @@ export class StrategyController {
     type: Number,
     example: 1,
   })
-  @ApiBaseResponse(XtrategyListResponseDto)
+  @ApiBaseResponse(StrategyListResponseDto)
   @ApiNotFoundResponse({ description: '[ kpi strategy detail group not found ]' })
   @ResponseMessage('Get kip strategy detail by group success')
-  async getByGroupId(
+  async getStrategyGroupId(
     @Param('groupId', ParseIntPipe) groupId: number,
   ) {
     return await this.strategyService.getStrategyGroupId(groupId);
@@ -79,10 +79,10 @@ export class StrategyController {
 
     @Patch('/details/:id')
     @ApiOperation({ summary: '[ Update kpi strategy detail ]' })
-    @ApiBaseResponse(XtrategyListResponseDto)
+    @ApiBaseResponse(StrategyListResponseDto)
     @ResponseMessage('Update kpi strategy detail success')
     async updateStrategy(@Param('id') xid: number
-      , @Body() dto: XUpdateStrtegyDto): Promise<XtrategyListResponseDto> {
+      , @Body() dto: UpdateStrtegyDto): Promise<StrategyListResponseDto> {
   
       return await this.strategyService.updateStrategy(xid, dto)
     }

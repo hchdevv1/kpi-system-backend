@@ -1,15 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-
 import { ApiProperty } from '@nestjs/swagger';
-
-export class XStrategyGroupResponseDto {
+export class StrategyResponseDto {
   @ApiProperty({ example: 1 })
   id!: number;
 
-  @ApiProperty({ example: 'STG001' })
+  @ApiProperty({ example: 'SU001' })
   code!: string;
 
-  @ApiProperty({ example: 'Strategy' })
+  @ApiProperty({ example: 'Med' })
   description!: string;
 
+  @ApiProperty({ example: true })
+  is_active?: boolean;
 }

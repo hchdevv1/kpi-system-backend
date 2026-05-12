@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException ,NotFoundException} from '@nestjs/common';
 import {
   EntityManager,
   EntityTarget,
@@ -26,7 +26,7 @@ export async function validateRefExists<T extends ObjectLiteral>(
   });
 
   if (!exists) {
-    throw new BadRequestException(`${fieldName} (${id}) not found`);
+    throw new NotFoundException(`${fieldName} (${id}) not found`);
   }
 }
 
@@ -53,7 +53,7 @@ export async function validateRefsExist<T extends ObjectLiteral>(
   const missingIds = uniqueIds.filter((id) => !foundIds.includes(id));
 
   if (missingIds.length > 0) {
-    throw new BadRequestException(
+    throw new NotFoundException(
       `${fieldName} not found: [${missingIds.join(', ')}]`,
     );
   }

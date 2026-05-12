@@ -2,7 +2,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty } from 'class-validator';
 
-export class XCreateOrganizationGroupDto {
+export class CreateOrganizationGroupDto {
 
   @ApiProperty({ example: 'Main' })
   @IsNotEmpty()

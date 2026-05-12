@@ -24,10 +24,8 @@ export class ServiceUnitController {
   async createServiceUnitGroup(
     @Body() dto: CreateServiceUnitGroupDto,
   ): Promise<ServiceUnitGroupResponseDto> {
-
     return await this.serviceUnitService.createServiceUnitGroup(dto);
   }
-
   @Get('/group')
   @ApiOperation({ summary: '[ Get all service-unit group ]' })
   @ApiBaseResponse(ServiceUnitGroupResponseDto, { isArray: true })
@@ -35,18 +33,14 @@ export class ServiceUnitController {
   async findAllServiceUnitGroup(): Promise<ServiceUnitGroupResponseDto[]> {
     return await this.serviceUnitService.findAllServiceUnitGroup();
   }
-
   @Patch('/group/:id')
   @ApiOperation({ summary: '[ Update service-unit group ]' })
   @ApiBaseResponse(ServiceUnitGroupResponseDto)
   @ResponseMessage('Update service-unit group success')
   async updateServiceUnitGroup(@Param('id') xid: number
     , @Body() dto: UpdateServiceUnitGroupDto): Promise<ServiceUnitGroupResponseDto> {
-
     return await this.serviceUnitService.updateServiceUnitGroup(xid, dto)
   }
-
-
   @Post('details')
   @ApiOperation({ summary: '[ Create service-unit ]' })
   @ApiBaseResponse(CreateServiceUnitDto)
@@ -57,8 +51,6 @@ export class ServiceUnitController {
 
     return await this.serviceUnitService.createServiceUnit(dto);
   }
-
-
   @Get('details/:groupId')
   @ApiOperation({ summary: '[ Get service-unit by group id ]' })
   @ApiParam({
@@ -69,12 +61,12 @@ export class ServiceUnitController {
   @ApiBaseResponse(ServiceUnitListResponseDto)
   @ApiNotFoundResponse({ description: '[ service-unit group not found ]' })
   @ResponseMessage('Get service-unit by group success')
-  async getByGroupId(
+  async getServiceUnitByGroupId(
     @Param('groupId', ParseIntPipe) groupId: number,
   ) {
     return await this.serviceUnitService.getServiceUnitByGroupId(groupId);
   }
-   @Patch('/details/:id')
+  @Patch('/details/:id')
   @ApiOperation({ summary: '[ Update service-unit ]' })
   @ApiBaseResponse(ServiceUnitGroupResponseDto)
   @ResponseMessage('Update service-unit success')

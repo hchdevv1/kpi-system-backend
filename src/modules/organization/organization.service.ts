@@ -8,24 +8,15 @@ import { MstOrganizationGroup } from './entities/mst_organization_group.entity';
 import { DbRetryHelper } from '../../common/helpers/db-retry.helper';
 import { CodeGeneratorService } from '../../common/services/code-generator.service';
 
-import { XOrganizationGroupResponseDto } from './dto/y-organization-group-response.dto';
-import { XCreateOrganizationGroupDto } from './dto/y-create-organization-group.dto';
-import {XUpdateorganzationGroupDto } from './dto/y-update-organzation-group.dto';
+import { OrganizationGroupResponseDto } from './dto/organization-group-response.dto';
+import { CreateOrganizationGroupDto } from './dto/create-organization-group.dto';
+import { UpdateorganzationGroupDto } from './dto/update-organzation-group.dto';
 
-import { XOrganzationListResponseDto } from './dto/y-organzation-list-response.dto';
-import { XCreateOrganizationDto} from './dto/y-create-organization.dto';
-import { XUpdateOrganizationDto } from './dto/y-update-organzation.dto';
+import { OrganzationListResponseDto } from './dto/organzation-list-response.dto';
+import { CreateOrganizationDto } from './dto/create-organization.dto';
+import { UpdateOrganizationDto } from './dto/update-organzation.dto';
 
-/*import { CreateOrganizationResponseDto } from './dto/organization-create-response.dto';
-import { GetOrganizationGroupResponseDto } from './dto/organization-group-response.dto';
-import { OrganizationGroupDto } from './dto/organization-group.dto';
-
-
-import { XCreateOrganizationGroupDto } from './dto/1create-organization-group.dto';
-import { XOrganizationGroupDto } from './dto/1organization-group.dto'
-import { XUpdateOrganizationGroupDto} from './dto/1update-organization-group.dto';
-*/
-
+import { validateRefExists } from '../../common/helpers/validate-ref.helper';
 @Injectable()
 export class OrganizationService {
   constructor(
@@ -41,7 +32,7 @@ export class OrganizationService {
   ) { }
 
 
-  async findAllOrganzationGroup(): Promise<XOrganizationGroupResponseDto[]> {
+  async findAllOrganzationGroup(): Promise<OrganizationGroupResponseDto[]> {
     const groups = await this.organizationGroupRepo.find({
       order: { id: 'ASC' },
     });
@@ -51,7 +42,7 @@ export class OrganizationService {
       description: g.description,
     }));
   }
-  async createStrategyGroup(dto: XCreateOrganizationGroupDto): Promise<XOrganizationGroupResponseDto> {
+  async createStrategyGroup(dto: CreateOrganizationGroupDto): Promise<OrganizationGroupResponseDto> {
     const { description: descFromDto } = dto;
     return this.dbRetryHelper.onUnique(async () => {
 
@@ -74,8 +65,8 @@ export class OrganizationService {
     });
   }
 
- async updateOrganzationGroup(
-    xid: number, dto: XUpdateorganzationGroupDto): Promise<XOrganizationGroupResponseDto> {
+  async updateOrganzationGroup(
+    xid: number, dto: UpdateorganzationGroupDto): Promise<OrganizationGroupResponseDto> {
     const entity = await this.organizationGroupRepo.findOne({
       where: { id: xid },
     });
@@ -95,47 +86,53 @@ export class OrganizationService {
     };
   }
 
-async createOrganzation(dto: XCreateOrganizationDto): Promise<XOrganzationListResponseDto> {
-      const { description, mst_organization_group_id } = dto;
-      return this.dbRetryHelper.onUnique(async () => {
-  
-        const lastRecord = await this.organizationRepo.find({
-          order: { id: 'DESC' },
-          take: 1,
-        });
-        const lastCode = lastRecord[0]?.code;
-        const runningCode = this.codeGenerator.generateByType("ORGAN", lastCode)
-        const entity = this.organizationRepo.create({
-          code: runningCode,
-          description,
-          mst_organization_group_id: mst_organization_group_id,
-        });
-        const saved = await this.organizationRepo.save(entity);
-        const group = await this.organizationGroupRepo.findOne({
-          where: { id: mst_organization_group_id },
-        });
-        if (!group) {
-          throw new NotFoundException('Organization group not found');
-        }
-        return {
-          kpistrategyGroup: {
-            id: group.id,
-            code: group.code,
-            description: group.description,
-            kpiStrategies: [
-              {
-                id: saved.id,
-                code: saved.code,
-                description: saved.description,
-                is_active: saved.is_active,
-              },
-            ],
-          },
-        };
-      });
-    }
+  async createOrganzation(dto: CreateOrganizationDto): Promise<OrganzationListResponseDto> {
 
- async getOrganzationGroupId(groupId: number): Promise<XOrganzationListResponseDto> {
+    const { description, mst_organization_group_id } = dto;
+    return this.dbRetryHelper.onUnique(async () => {
+      await validateRefExists(
+        this.organizationRepo.manager,
+        MstOrganizationGroup,
+        mst_organization_group_id,
+        'Organization group',
+      );
+
+      const lastRecord = await this.organizationRepo.find({
+        order: { id: 'DESC' },
+        take: 1,
+      });
+      const lastCode = lastRecord[0]?.code;
+      const runningCode = this.codeGenerator.generateByType("ORGAN", lastCode)
+      const entity = this.organizationRepo.create({
+        code: runningCode,
+        description,
+        mst_organization_group_id: mst_organization_group_id,
+      });
+      const saved = await this.organizationRepo.save(entity);
+      const group = await this.organizationGroupRepo.findOneOrFail({
+        where: { id: mst_organization_group_id },
+      });
+       
+
+      return {
+        kpiOrganizationGroup: {
+          id: group.id,
+          code: group.code,
+          description: group.description,
+          kpiOrganizations: [
+            {
+              id: saved.id,
+              code: saved.code,
+              description: saved.description,
+              is_active: saved.is_active,
+            },
+          ],
+        },
+      };
+    });
+  }
+
+  async getOrganzationGroupId(groupId: number): Promise<OrganzationListResponseDto> {
 
     const group = await this.organizationGroupRepo.findOne({
       where: { id: groupId },
@@ -151,11 +148,11 @@ async createOrganzation(dto: XCreateOrganizationDto): Promise<XOrganzationListRe
     });
 
     return {
-      kpistrategyGroup: {
+      kpiOrganizationGroup: {
         id: group.id,
         code: group.code,
         description: group.description,
-        kpiStrategies: kpisimple.map((s) => ({
+        kpiOrganizations: kpisimple.map((s) => ({
           id: s.id,
           code: s.code,
           description: s.description,
@@ -164,19 +161,21 @@ async createOrganzation(dto: XCreateOrganizationDto): Promise<XOrganzationListRe
       },
     };
   }
-async updateOrganization(
+  async updateOrganization(
     xid: number,
-    dto: XUpdateOrganizationDto,
-  ): Promise<XOrganzationListResponseDto> {
+    dto: UpdateOrganizationDto,
+  ): Promise<OrganzationListResponseDto> {
     // 1. หา record + relation
     const entity = await this.organizationRepo.findOne({
       where: { id: xid },
       relations: ['organizationGroup'],
     });
 
-    if (!entity) {
-      throw new NotFoundException('Organization not found');
-    }
+  if (!entity) {
+    throw new NotFoundException(
+      `KPI Organization (${xid}) not found`,
+    );
+  }
 
     // 2. update field
     const { description, is_active } = dto;
@@ -192,23 +191,14 @@ async updateOrganization(
     // 3. save
     const saved = await this.organizationRepo.save(entity);
 
-    // 4. หา group
-
-    const group = await this.organizationGroupRepo.findOne({
-      where: { id: entity.mst_organization_group_id },
-    });
-
-    if (!group) {
-      throw new NotFoundException('KPI Strategy not found');
-    }
-
+   
     // 5. return เฉพาะตัวที่ update
     return {
-      kpistrategyGroup: {
-        id: group.id,
-        code: group.code,
-        description: group.description,
-        kpiStrategies: [
+      kpiOrganizationGroup: {
+        id: entity.organizationGroup.id,
+        code: entity.organizationGroup.code,
+        description: entity.organizationGroup.description,
+        kpiOrganizations: [
           {
             id: saved.id,
             code: saved.code,
@@ -220,162 +210,4 @@ async updateOrganization(
     };
   }
 
-} /*
-  async createOrganization(
-    description: string,
-    groupId: number,
-  ): Promise<CreateOrganizationResponseDto> {
-    const group = await this.organizationGroupRepo.findOne({
-      where: { id: groupId },
-    });
-
-    if (!group) {
-      throw new NotFoundException('Organization group not found');
-    }
-
-    const lastOrganization = await this.organizationRepo
-      .createQueryBuilder('s')
-      .where('s.mst_organization_group_id = :groupId', { groupId })
-      .orderBy('s.id', 'DESC')
-      .getOne();
-
-    let nextNumber = 1;
-
-    if (lastOrganization?.code) {
-      const parts = lastOrganization.code.split('-');
-      nextNumber = parseInt(parts[1] || '0', 10) + 1;
-    }
-
-    const code = `${group.code}-${String(nextNumber).padStart(3, '0')}`;
-
-    const entity = this.organizationRepo.create({
-      code,
-      description,
-      organizationGroup: group,
-    });
-
-    const saved = await this.organizationRepo.save(entity);
-
-    return {
-      OrganizationGroup: {
-        id: group.id,
-        code: group.code,
-        description: group.description,
-      },
-      id: saved.id,
-      code: saved.code,
-      description: saved.description,
-      mst_organization_group_id: saved.mst_organization_group_id,
-      is_active: saved.is_active,
-
-    };
-  }
-
-
-  async createOrganizationGroup(dto:XCreateOrganizationGroupDto,):Promise<XOrganizationGroupDto> {
-    const {code,description} = dto;
-    const exists = await this.organizationGroupRepo.findOne({
-      where: { code },
-    });
-
-    if (exists) {
-      throw new BadRequestException('Organization group code already exists');
-    }
-
-    const entity = this.organizationGroupRepo.create({
-      code,
-      description,
-    });
-    const saved =await this.organizationGroupRepo.save(entity);
-
-    return{
-      id: saved.id,
-      code :saved.code,
-      description :saved.description,
-    };
-  }
-
-  async editOrganizationGroup(
-  id: number,
-  dto: XUpdateOrganizationGroupDto,
-): Promise<XOrganizationGroupDto> {
-  const entity = await this.organizationGroupRepo.findOne({
-    where: { id },
-  });
-
-  if (!entity) {
-    throw new NotFoundException('Organization group not found');
-  }
-
-  // 🔥 ถ้ามีการแก้ code → check duplicate
-  if (dto.code && dto.code !== entity.code) {
-    const exists = await this.organizationGroupRepo.findOne({
-      where: { code: dto.code },
-    });
-
-    if (exists) {
-      throw new BadRequestException('Organization group code already exists');
-    }
-  }
-
-  // 🔥 merge ค่าใหม่
-  Object.assign(entity, dto);
-
-  const saved = await this.organizationGroupRepo.save(entity);
-
-  return {
-    id: saved.id,
-    code: saved.code,
-    description: saved.description,
-  };
-}
-
-  async getOrganizationGroups(): Promise<OrganizationGroupDto[]> {
-    const groups = await this.organizationGroupRepo.find({
-      order: { id: 'ASC' },
-    });
-    return groups.map((g) => ({
-      id: g.id,
-      code: g.code,
-      description: g.description,
-    }));
-  }
-  async getOrganization(): Promise<GetOrganizationGroupResponseDto[]> {
-    return this.organizationRepo.find({
-      relations: ['organizationGroup'],
-      order: { id: 'ASC' },
-    });
-  }
-
-  async getOrganizationByGroupId(groupId: number): Promise<GetOrganizationGroupResponseDto> {
-
-    const group = await this.organizationGroupRepo.findOne({
-      where: { id: groupId },
-    });
-
-    if (!group) {
-      throw new NotFoundException('Organization group not found');
-    }
-
-    const organizations = await this.organizationRepo.find({
-      where: { mst_organization_group_id: groupId },
-      relations: ['organizationGroup'],
-      order: { id: 'ASC' },
-    });
-
-    return {
-      organizationGroup: {
-        id: group.id,
-        code: group.code,
-        description: group.description,
-        organizations: organizations.map((s) => ({
-          id: s.id,
-          code: s.code,
-          description: s.description,
-          is_active: s.is_active,
-        })),
-      },
-    };
-  }
-}
-*/
+} 

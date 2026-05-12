@@ -2,11 +2,11 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsNotEmpty } from 'class-validator';
 
-export class XUpdateorganzationGroupDto {
+export class UpdateStrategyGroupDto {
 
   @IsOptional()
   @IsNotEmpty()
-  @ApiPropertyOptional({ example: 'KPI organzation' })
+  @ApiPropertyOptional({ example: 'Strategy' })
   description?: string;
 
 }

@@ -17,6 +17,7 @@ import { UpdateSimpleGroupDto } from './dto/update-simple-group.dto';
 import { SimpleListResponseDto } from './dto/simple-list-response.dto';
 import { CreateSimpleDto } from './dto/create-simple.dto';
 import { UpdateSimpleDto } from './dto/update-simple.dto';
+import { validateRefExists } from '../../common/helpers/validate-ref.helper';
 @Injectable()
 export class KpiSimpleService {
   constructor(
@@ -50,8 +51,6 @@ export class KpiSimpleService {
       };
     });
   }
-
-
   async findAllSimpleGroup(): Promise<SimpleGroupResponseDto[]> {
     const groups = await this.simpleGroupRepo.find({
       order: { id: 'ASC' },
@@ -62,7 +61,6 @@ export class KpiSimpleService {
       description: g.description,
     }));
   }
-
   async updateSimpleGroup(
     xid: number, dto: UpdateSimpleGroupDto): Promise<SimpleGroupResponseDto> {
 
@@ -118,11 +116,15 @@ export class KpiSimpleService {
       },
     };
   }
-  /*
   async createSimple(dto: CreateSimpleDto): Promise<SimpleListResponseDto> {
     const { description, simple_group_id } = dto;
     return this.dbRetryHelper.onUnique(async () => {
-
+    await validateRefExists(
+        this.simpleRepo.manager,
+        MstSimpleGroup,
+        simple_group_id,
+        'Simple group',
+      );
       const lastRecord = await this.simpleRepo.find({
         order: { id: 'DESC' },
         take: 1,
@@ -132,22 +134,18 @@ export class KpiSimpleService {
       const entity = this.simpleRepo.create({
         code: runningCode,
         description,
-        kpisimpleGroup: { id: simple_group_id }, // ✅ ใช้ relation object
+        simple_group_id: simple_group_id,
       });
       const saved = await this.simpleRepo.save(entity);
-      const group = await this.simpleGroupRepo.findOne({
+      const group = await this.simpleGroupRepo.findOneOrFail({
         where: { id: simple_group_id },
-        relations: ['kpisimplegroup'], // 👈 ชื่อ field ต้องตรง entity
       });
-      if (!group) {
-        throw new NotFoundException('Service unit group not found');
-      }
       return {
         kpisimpleGroup: {
           id: group.id,
           code: group.code,
           description: group.description,
-          kpisimple: [
+          kpisimples: [
             {
               id: saved.id,
               code: saved.code,
@@ -158,89 +156,34 @@ export class KpiSimpleService {
         },
       };
     });
-  }*/
-  async createSimple(dto: CreateSimpleDto): Promise<SimpleListResponseDto> {
-    const { description, simple_group_id } = dto;
-    return this.dbRetryHelper.onUnique(async () => {
-
-      const lastRecord = await this.simpleRepo.find({
-        order: { id: 'DESC' },
-        take: 1,
-      });
-      const lastCode = lastRecord[0]?.code;
-      const runningCode = this.codeGenerator.generateByType("KPISIMPLE", lastCode)
-       const entity = this.simpleRepo.create({
-      code: runningCode,
-      description,
-      simple_group_id: simple_group_id, 
-    });
-      const saved = await this.simpleRepo.save(entity);
-      const group = await this.simpleGroupRepo.findOne({
-        where: { id: simple_group_id },
-      });
-      if (!group) {
-        throw new NotFoundException('Service unit group not found');
-      }
-     return {
-      kpisimpleGroup: {
-        id: group.id,
-        code: group.code,
-        description: group.description,
-        kpisimples: [
-          {
-            id: saved.id,
-            code: saved.code,
-            description: saved.description,
-            is_active: saved.is_active,
-          },
-        ],
-      },
-    };
-  });
   }
   async updateSimple(
     xid: number,
     dto: UpdateSimpleDto,
   ): Promise<SimpleListResponseDto> {
 
-    // 1. หา record + relation
     const entity = await this.simpleRepo.findOne({
       where: { id: xid },
       relations: ['kpisimplegroup'],
     });
 
     if (!entity) {
-      throw new NotFoundException('Service unit not found');
+      throw new NotFoundException(`Simple (${xid}) not found`,);
     }
-
-    // 2. update field
     const { description, is_active } = dto;
-
     if (description !== undefined) {
       entity.description = description;
     }
-
     if (typeof is_active === 'boolean') {
       entity.is_active = is_active;
     }
-
-    // 3. save
     const saved = await this.simpleRepo.save(entity);
-
-    // 4. หา group
-    const group = entity.kpisimplegroup;
-
-
-    if (!group) {
-      throw new NotFoundException('Service unit group not found');
-    }
-
-    // 5. return เฉพาะตัวที่ update
+  
     return {
       kpisimpleGroup: {
-        id: group.id,
-        code: group.code,
-        description: group.description,
+        id: entity.kpisimplegroup.id,
+        code: entity.kpisimplegroup.code,
+        description: entity.kpisimplegroup.description,
         kpisimple: [
           {
             id: saved.id,

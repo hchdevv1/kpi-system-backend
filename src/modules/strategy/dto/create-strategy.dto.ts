@@ -2,7 +2,7 @@
 import { IsString, Length, IsInt } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class XCreateStrategyDto {
+export class CreateStrategyDto {
  
   @ApiProperty({ example: 'พัฒนาศักยภาพการดูแลรักษา เพิ่มคุณภาพและสร้างความปลอดภัยระดับมาตรฐานสากล' })
   @IsString()

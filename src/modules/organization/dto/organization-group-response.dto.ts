@@ -1,23 +1,15 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+
 import { ApiProperty } from '@nestjs/swagger';
-import { OrganizationDto} from './organizationDto.dto';
-
-
 
 export class OrganizationGroupResponseDto {
-  @ApiProperty()
+  @ApiProperty({ example: 1 })
   id!: number;
 
-  @ApiProperty()
+  @ApiProperty({ example: 'OGG001' })
   code!: string;
 
-  @ApiProperty()
-  description?: string;
+  @ApiProperty({ example: 'Main' })
+  description!: string;
 
-  @ApiProperty({ type: [OrganizationDto] })
-  organizations?: OrganizationDto[];
-}
-
-export class GetOrganizationGroupResponseDto {
-  @ApiProperty({ type: OrganizationGroupResponseDto })
-  organizationGroup!: OrganizationGroupResponseDto;
 }

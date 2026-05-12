@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+
 import { Injectable, Logger } from '@nestjs/common';
+import { DB_ERROR_CODE } from '../constants/db-error-code.constant';
 
 @Injectable()
 export class DbRetryHelper {
@@ -19,10 +21,11 @@ export class DbRetryHelper {
         lastError = err;
 
         // PostgreSQL unique violation
-        if (err.code === '23505') {
+        if (err.code === DB_ERROR_CODE.UNIQUE_VIOLATION) {
           this.logger.warn(
             `Duplicate detected (attempt ${attempt}/${maxRetry})`,
           );
+
           continue;
         }
 
@@ -32,6 +35,7 @@ export class DbRetryHelper {
     }
 
     this.logger.error('Max retry reached for unique constraint');
+
     throw lastError;
   }
 }

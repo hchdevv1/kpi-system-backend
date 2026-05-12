@@ -49,7 +49,7 @@ export class KpiSimpleController {
   @ApiOperation({ summary: '[ Create kpi simple ]' })
   @ApiBaseResponse(SimpleListResponseDto)
   @ResponseMessage('Create kpi simple success')
-  async createServiceUnit(
+  async createSimple(
     @Body() dto: CreateSimpleDto,
   ): Promise<SimpleListResponseDto> {
 
@@ -66,7 +66,7 @@ export class KpiSimpleController {
   @ApiBaseResponse(SimpleListResponseDto)
   @ApiNotFoundResponse({ description: '[ kpi simple group not found ]' })
   @ResponseMessage('Get kip simple by group success')
-  async getByGroupId(
+  async getSimpleGroupId(
     @Param('groupId', ParseIntPipe) groupId: number,
   ) {
     return await this.kpiSimpleService.getSimpleGroupId(groupId);
@@ -76,7 +76,7 @@ export class KpiSimpleController {
   @ApiOperation({ summary: '[ Update kpi simple ]' })
   @ApiBaseResponse(SimpleListResponseDto)
   @ResponseMessage('Update kpi simple success')
-  async updateServiceUnit(@Param('id') xid: number
+  async updateSimple(@Param('id') xid: number
     , @Body() dto: UpdateSimpleDto): Promise<SimpleListResponseDto> {
 
     return await this.kpiSimpleService.updateSimple(xid, dto)
