@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException ,NotFoundException} from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
 import { KpiDefinition } from './entities/kpi-definition.entity';
@@ -10,9 +10,25 @@ import { KpiUserRolesMappings } from '../kpi-user-roles-mappings/entities/kpi_us
 
 import { CreateKpiDefinitionDto } from './dto/create-kpi-definition.dto';
 import { CreateKpiDefinitionResponseDto } from './dto/create-kpi-definition-response.dto';
-import {QueryKpiDefinitionDto} from './dto/query-kpi-definition.dto';
+import { QueryKpiDefinitionDto } from './dto/query-kpi-definition.dto';
 import { KpiMapper } from './mappers/kpi.mapper';
-
+import {
+  validateRefExists,
+  validateRefsExist,
+  validateNestedRefs,
+} from '../../../common/helpers/validate-ref.helper';
+import { MstTopic } from '../../topic/entities/mst_topic.entity';
+import { MstMeasure } from '../../measure-category/entities/mst_measure.entity';
+import { MstFrequency } from '../../frequency/entities/mst_frequency.entity';
+import { MstUnit } from '../../unit/entities/mst_kpi_unit.entity';
+import { MstConditionOperator } from '../../condition-operator/entities/mst_condition_operator.entity';
+import { MstBenchmark } from '../../benchmark/entities/mst_benchmark.entity';
+import { MstStrategy } from '../../strategy/entities/mst_strategy.entity';
+import { MstOrganization } from '../../organization/entities/mst_organization.entity';
+import { MstServiceUnit } from '../../service-unit/entities/mst_serviceunit.entity';
+import { MstSimple } from '../../simple/entities/mst_simple.entity';
+import { UserSystem } from '../../users/entities/users.entity';
+import { MstKpiRoles } from '../../roles/entities/utils_kpi_roles.entity';
 
 @Injectable()
 export class KpiDefinitionService {
@@ -21,6 +37,95 @@ export class KpiDefinitionService {
   async create(dto: CreateKpiDefinitionDto) {
     return this.dataSource.transaction(async (manager) => {
 
+      // =========================
+      // VALIDATE
+      // =========================
+      await validateRefExists(
+        manager,
+        MstTopic,
+        dto.topicRefId,
+        'Topic',
+      );
+
+      await validateRefExists(
+        manager,
+        MstMeasure,
+        dto.measureRefId,
+        'Measure',
+      );
+
+      await validateRefExists(
+        manager,
+        MstFrequency,
+        dto.frequencyRefId,
+        'Frequency',
+      );
+
+      await validateRefExists(
+        manager,
+        MstUnit,
+        dto.unitRefId,
+        'Unit',
+      );
+
+      await validateRefExists(
+        manager,
+        MstConditionOperator,
+        dto.conditionOperatorRefId,
+        'Condition operator',
+      );
+
+      await validateRefExists(
+        manager,
+        MstBenchmark,
+        dto.benchmarkRefId,
+        'Benchmark',
+      );
+
+      await validateRefsExist(
+        manager,
+        MstStrategy,
+        dto.strategyIds,
+        'Strategy',
+      );
+
+      await validateRefsExist(
+        manager,
+        MstOrganization,
+        dto.organizationIds,
+        'Organization',
+      );
+
+      await validateRefsExist(
+        manager,
+        MstServiceUnit,
+        dto.serviceUnitIds,
+        'Service unit',
+      );
+
+      await validateRefsExist(
+        manager,
+        MstSimple,
+        dto.simpleIds,
+        'Simple',
+      );
+
+
+      await validateNestedRefs(
+        manager,
+        UserSystem,
+        dto.userRoles,
+        'userId',
+        'User',
+      );
+
+      await validateNestedRefs(
+        manager,
+        MstKpiRoles,
+        dto.userRoles,
+        'roleId',
+        'Role',
+      );
       // =========================
       // 1. CREATE KPI
       // =========================
@@ -338,6 +443,162 @@ export class KpiDefinitionService {
 
     return KpiMapper.toCreateResponse(entity);
   }
+  async patch2(
+    id: number,
+    dto: CreateKpiDefinitionDto,
+  ): Promise<CreateKpiDefinitionResponseDto> {
+    return this.dataSource.transaction(async (manager) => {
+
+      // =========================
+      // 1. FIND EXISTING KPI
+      // =========================
+      const kpi = await manager.findOne(KpiDefinition, {
+        where: { id },
+        relations: {
+          kpiStrategies: true,
+          kpiOrganizations: true,
+          kpiServiceUnits: true,
+          kpiSimples: true,
+          userRoles: true,
+        },
+      });
+
+      if (!kpi) {
+        throw new BadRequestException(`KPI ID ${id} not found`);
+      }
+
+      // =========================
+      // 2. UPDATE MAIN FIELDS
+      // =========================
+      Object.assign(kpi, {
+        topic_ref_id: dto.topicRefId,
+        kpi_year: dto.kpiYear,
+        kpiStartDate: dto.kpiStartDate,
+
+        measureRefId: dto.measureRefId,
+        frequencyRefId: dto.frequencyRefId,
+        unitRefId: dto.unitRefId,
+        conditionOperatorRefId: dto.conditionOperatorRefId,
+
+        numerator: dto.numerator,
+        denominator: dto.denominator,
+        multiplier: dto.multiplier,
+
+        targetValue: dto.targetValue,
+        previousYearValue: dto.previousYearValue,
+        benchmarkRefId: dto.benchmarkRefId,
+        benchmark_target_value: dto.benchmarkTargetValue,
+
+        is_active: true,
+      });
+
+      await manager.save(KpiDefinition, kpi);
+
+      // =========================
+      // 3. CLEAR OLD MAPPINGS
+      // =========================
+      await manager.delete(KpiStrategyMappings, { kpiId: id });
+      await manager.delete(KpiOrganizationMappings, { kpiId: id });
+      await manager.delete(KpiServiceUnitsMappings, { kpiId: id });
+      await manager.delete(KpiSimpleMappings, { kpiId: id });
+      await manager.delete(KpiUserRolesMappings, { kpiId: id });
+
+      // =========================
+      // 4. RE-INSERT STRATEGY
+      // =========================
+      if (dto.strategyIds?.length) {
+        const rows = dto.strategyIds.map((strategyId) =>
+          manager.create(KpiStrategyMappings, {
+            kpiId: id,
+            strategyId,
+          }),
+        );
+        await manager.save(KpiStrategyMappings, rows);
+      }
+
+      // =========================
+      // 5. ORGANIZATION
+      // =========================
+      if (dto.organizationIds?.length) {
+        const rows = dto.organizationIds.map((organizationId) =>
+          manager.create(KpiOrganizationMappings, {
+            kpiId: id,
+            organizationId,
+          }),
+        );
+        await manager.save(KpiOrganizationMappings, rows);
+      }
+
+      // =========================
+      // 6. SERVICE UNIT
+      // =========================
+      if (dto.serviceUnitIds?.length) {
+        const rows = dto.serviceUnitIds.map((serviceUnitId) =>
+          manager.create(KpiServiceUnitsMappings, {
+            kpiId: id,
+            serviceUnitId,
+          }),
+        );
+        await manager.save(KpiServiceUnitsMappings, rows);
+      }
+
+      // =========================
+      // 7. SIMPLE
+      // =========================
+      if (dto.simpleIds?.length) {
+        const rows = dto.simpleIds.map((simpleId) =>
+          manager.create(KpiSimpleMappings, {
+            kpiId: id,
+            simpleId,
+          }),
+        );
+        await manager.save(KpiSimpleMappings, rows);
+      }
+
+      // =========================
+      // 8. USER ROLES
+      // =========================
+      if (dto.userRoles?.length) {
+        const rows = dto.userRoles.map((r) =>
+          manager.create(KpiUserRolesMappings, {
+            kpiId: id,
+            userId: r.userId,
+            description: 'r.userId',
+            roleId: r.roleId,
+          }),
+        );
+        await manager.save(KpiUserRolesMappings, rows);
+      }
+
+      // =========================
+      // 9. RELOAD FULL DATA
+      // =========================
+      const full = await manager.findOne(KpiDefinition, {
+        where: { id },
+        relations: {
+          topic: true,
+          measureCategory: true,
+          frequency: true,
+          unit: true,
+          conditionOperator: true,
+          benchmark: true,
+
+          kpiStrategies: { strategy: { strategyGroup: true } },
+          kpiOrganizations: { organization: { organizationGroup: true } },
+          kpiServiceUnits: { serviceUnit: { serviceUnitGroup: true } },
+          kpiSimples: { simple: { kpisimplegroup: true } },
+
+          userRoles: { user: true, role: true },
+        },
+      });
+
+      if (!full) {
+        throw new BadRequestException('KPI not found after patch');
+      }
+
+      return KpiMapper.toCreateResponse(full);
+    });
+  }
   async patch(
   id: number,
   dto: CreateKpiDefinitionDto,
@@ -359,33 +620,71 @@ export class KpiDefinitionService {
     });
 
     if (!kpi) {
-      throw new BadRequestException(`KPI ID ${id} not found`);
+      throw new NotFoundException(`KPI ID ${id} not found`);
     }
 
     // =========================
-    // 2. UPDATE MAIN FIELDS
+    // 2. UPDATE MAIN FIELDS (PATCH STYLE)
     // =========================
-    Object.assign(kpi, {
-      topic_ref_id: dto.topicRefId,
-      kpi_year: dto.kpiYear,
-      kpiStartDate: dto.kpiStartDate,
+    if (dto.topicRefId !== undefined) {
+      kpi.topic_ref_id = dto.topicRefId;
+    }
 
-      measureRefId: dto.measureRefId,
-      frequencyRefId: dto.frequencyRefId,
-      unitRefId: dto.unitRefId,
-      conditionOperatorRefId: dto.conditionOperatorRefId,
+    if (dto.kpiYear !== undefined) {
+      kpi.kpi_year = dto.kpiYear;
+    }
 
-      numerator: dto.numerator,
-      denominator: dto.denominator,
-      multiplier: dto.multiplier,
+    if (dto.kpiStartDate !== undefined) {
+      kpi.kpiStartDate = dto.kpiStartDate;
+    }
 
-      targetValue: dto.targetValue,
-      previousYearValue: dto.previousYearValue,
-      benchmarkRefId: dto.benchmarkRefId,
-      benchmark_target_value: dto.benchmarkTargetValue,
+    if (dto.measureRefId !== undefined) {
+      kpi.measureRefId = dto.measureRefId;
+    }
 
-      is_active: true,
-    });
+    if (dto.frequencyRefId !== undefined) {
+      kpi.frequencyRefId = dto.frequencyRefId;
+    }
+
+    if (dto.unitRefId !== undefined) {
+      kpi.unitRefId = dto.unitRefId;
+    }
+
+    if (dto.conditionOperatorRefId !== undefined) {
+      kpi.conditionOperatorRefId = dto.conditionOperatorRefId;
+    }
+
+    if (dto.numerator !== undefined) {
+      kpi.numerator = dto.numerator;
+    }
+
+    if (dto.denominator !== undefined) {
+      kpi.denominator = dto.denominator;
+    }
+
+    if (dto.multiplier !== undefined) {
+      kpi.multiplier = dto.multiplier;
+    }
+
+    if (dto.targetValue !== undefined) {
+      kpi.targetValue = dto.targetValue;
+    }
+
+    if (dto.previousYearValue !== undefined) {
+      kpi.previousYearValue = dto.previousYearValue;
+    }
+
+    if (dto.benchmarkRefId !== undefined) {
+      kpi.benchmarkRefId = dto.benchmarkRefId;
+    }
+
+    if (dto.benchmarkTargetValue !== undefined) {
+      kpi.benchmark_target_value = dto.benchmarkTargetValue;
+    }
+
+    if (dto.isActive !== undefined) {
+      kpi.is_active = dto.isActive;
+    }
 
     await manager.save(KpiDefinition, kpi);
 
@@ -408,7 +707,7 @@ export class KpiDefinitionService {
           strategyId,
         }),
       );
-      await manager.save(KpiStrategyMappings, rows);
+      await manager.save(rows);
     }
 
     // =========================
@@ -421,7 +720,7 @@ export class KpiDefinitionService {
           organizationId,
         }),
       );
-      await manager.save(KpiOrganizationMappings, rows);
+      await manager.save(rows);
     }
 
     // =========================
@@ -434,7 +733,7 @@ export class KpiDefinitionService {
           serviceUnitId,
         }),
       );
-      await manager.save(KpiServiceUnitsMappings, rows);
+      await manager.save(rows);
     }
 
     // =========================
@@ -447,7 +746,7 @@ export class KpiDefinitionService {
           simpleId,
         }),
       );
-      await manager.save(KpiSimpleMappings, rows);
+      await manager.save(rows);
     }
 
     // =========================
@@ -458,11 +757,10 @@ export class KpiDefinitionService {
         manager.create(KpiUserRolesMappings, {
           kpiId: id,
           userId: r.userId,
-          description:'r.userId',
           roleId: r.roleId,
         }),
       );
-      await manager.save(KpiUserRolesMappings, rows);
+      await manager.save(rows);
     }
 
     // =========================
@@ -488,7 +786,7 @@ export class KpiDefinitionService {
     });
 
     if (!full) {
-      throw new BadRequestException('KPI not found after patch');
+      throw new NotFoundException('KPI not found after patch');
     }
 
     return KpiMapper.toCreateResponse(full);

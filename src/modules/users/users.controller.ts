@@ -18,6 +18,7 @@ import { PagingQueryDto } from './dto/pagination-topic.dto';
 import { UserListResponseDto } from './dto/userlist-response-pagination.dto';
 import { UpdateUserSystemDto} from './dto/update-user-system.dto';
 import {UserResponseDto } from './dto/user-system-response';
+import {ListUsesrSystemResponseDto} from './dto/userlist-system-reponse.dto'
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
@@ -44,8 +45,17 @@ export class UsersController {
     return this.usersService.getUserByCode(code);
   }
 
+@Get('usersystem/:keyword')
+@ApiOperation({ summary: '[ Get user by keyword]' })
+@ApiBaseResponse(ListUsesrSystemResponseDto)
+@ResponseMessage('Get user success')
+async getUserSystemByCode(
+  @Param('keyword') keyword: string,
+): Promise<ListUsesrSystemResponseDto> {
+  return this.usersService.getUserSystemByCode(keyword);
+}
 
-  @Get('usersystem')
+  @Get('usersystemlist')
   @ApiOperation({ summary: '[ Get user List]' })
   @ApiBaseResponse(UserListResponseDto)
   @ResponseMessage('Get user success')

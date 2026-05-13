@@ -5,7 +5,7 @@
 
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import 'dotenv/config';
@@ -18,8 +18,9 @@ import { PagingQueryDto } from './dto/pagination-topic.dto';
 
 import { UserSystem } from './entities/users.entity';
 import { UserListResponseDto } from './dto/userlist-response-pagination.dto';
-import {UpdateUserSystemDto} from './dto/update-user-system.dto';
-import {UserResponseDto} from './dto/user-system-response';
+import { UpdateUserSystemDto } from './dto/update-user-system.dto';
+import { UserResponseDto } from './dto/user-system-response';
+import { ListUsesrSystemResponseDto } from './dto/userlist-system-reponse.dto';
 @Injectable()
 export class UsersService {
   constructor(
@@ -76,6 +77,32 @@ export class UsersService {
       })),
     };
   }
+  async getUserSystemByCode(
+    keyword: string,
+  ): Promise<ListUsesrSystemResponseDto> {
+
+    const groups = await this.userSystemRepo.find({
+     where: [
+      {
+        usercode: ILike(`%${keyword}%`),
+      },
+      {
+        description: ILike(`%${keyword}%`),
+      },
+    ],
+      order: { id: 'ASC' },
+    });
+
+    const items: UserResponseDto[] = groups.map((g) => ({
+      id: g.id,
+      usercode: g.usercode,
+      description: g.description,
+      usersystem_role_id: g.usersystem_role_id,
+      roleDescription: g.usersystem_role_id === 1 ? 'admin' : 'user',
+      is_active: g.is_active,
+    }));
+    return { items };
+  }
   async findAll(query: PagingQueryDto): Promise<UserListResponseDto> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 10;
@@ -87,16 +114,16 @@ export class UsersService {
       .skip(skip)
       .take(limit)
       .getManyAndCount();
-  
-    
+
+
     return {
       UserInfo: data.map((g) => ({
-        id :g.id,
+        id: g.id,
         usercode: g.usercode,
         description: g.description,
         usersystem_role_id: g.usersystem_role_id,
-         roleDescription:g.usersystem_role_id === 1 ? 'admin' : 'user',
-         is_active:g.is_active
+        roleDescription: g.usersystem_role_id === 1 ? 'admin' : 'user',
+        is_active: g.is_active
 
       })),
       meta: {
@@ -108,35 +135,35 @@ export class UsersService {
     };
   }
   async updateConditionOperator(
-      xid: number, dto: UpdateUserSystemDto): Promise<UserResponseDto> {
-  
-      // 1. หา record
-      const entity = await this.userSystemRepo.findOne({
-        where: { id: xid },
-      });
-      if (!entity) {
-        throw new NotFoundException('condition-operator not found');
-      }
-   
-      const {  is_active,usersystem_role_id } = dto;
-      
-       if (usersystem_role_id !== undefined) {
-        entity.usersystem_role_id = usersystem_role_id;
-      }
-      if (typeof is_active === 'boolean') {
-        entity.is_active = is_active;
-      }
-   
-      const saved = await this.userSystemRepo.save(entity);
-  
-      return {
-        id: saved.id,
-        usercode: saved.usercode,
-        description: saved.description,
-        usersystem_role_id:saved.usersystem_role_id,
-        roleDescription:saved.usersystem_role_id === 1 ? 'admin' : 'user',
-        is_active: saved.is_active
-      };
+    xid: number, dto: UpdateUserSystemDto): Promise<UserResponseDto> {
+
+    // 1. หา record
+    const entity = await this.userSystemRepo.findOne({
+      where: { id: xid },
+    });
+    if (!entity) {
+      throw new NotFoundException('condition-operator not found');
     }
+
+    const { is_active, usersystem_role_id } = dto;
+
+    if (usersystem_role_id !== undefined) {
+      entity.usersystem_role_id = usersystem_role_id;
+    }
+    if (typeof is_active === 'boolean') {
+      entity.is_active = is_active;
+    }
+
+    const saved = await this.userSystemRepo.save(entity);
+
+    return {
+      id: saved.id,
+      usercode: saved.usercode,
+      description: saved.description,
+      usersystem_role_id: saved.usersystem_role_id,
+      roleDescription: saved.usersystem_role_id === 1 ? 'admin' : 'user',
+      is_active: saved.is_active
+    };
+  }
 
 }

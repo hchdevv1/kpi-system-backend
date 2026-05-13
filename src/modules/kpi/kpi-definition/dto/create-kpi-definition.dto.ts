@@ -6,6 +6,7 @@ import {
   IsString,
   ValidateNested,
   IsNumber,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -40,12 +41,14 @@ export class CreateKpiDefinitionDto {
   measureRefId?: number;
 
   @ApiProperty({ example: 1 })
+  @IsOptional()
   @IsInt()
-  frequencyRefId!: number;
+  frequencyRefId?: number;
 
   @ApiProperty({ example: 3 })
+  @IsOptional()
   @IsInt()
-  unitRefId!: number;
+  unitRefId?: number;
 
   @ApiPropertyOptional({ example: 1 })
   @IsOptional()
@@ -121,4 +124,9 @@ export class CreateKpiDefinitionDto {
   @ValidateNested({ each: true })
   @Type(() => UserRoleCreateDto)
   userRoles?: UserRoleCreateDto[];
+
+  @ApiProperty({ example: 'true' })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }

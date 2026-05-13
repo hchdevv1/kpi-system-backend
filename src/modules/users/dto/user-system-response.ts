@@ -31,3 +31,6 @@ export class UserResponseDto {
 
 
 }
+export class UserListResponseDto {
+  items!: UserResponseDto[];
+}

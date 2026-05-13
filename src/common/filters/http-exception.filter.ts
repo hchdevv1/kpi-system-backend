@@ -1,7 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-
 import {
   ArgumentsHost,
   Catch,
@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 
 import { DB_ERROR_CODE } from '../constants/db-error-code.constant';
+import { DB_UNIQUE_ERRORS } from '../constants/db-error-map';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -22,7 +23,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse();
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
-
     let message: string | string[] = 'Internal server error';
 
     // =========================
@@ -31,30 +31,31 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       status = exception.getStatus();
 
-      const exceptionResponse = exception.getResponse();
+      const res = exception.getResponse();
 
-      if (typeof exceptionResponse === 'string') {
-        message = exceptionResponse;
-      } else if (
-        typeof exceptionResponse === 'object' &&
-        exceptionResponse
-      ) {
-        message =
-          (exceptionResponse as any).message ??
-          'Internal server error';
+      if (typeof res === 'string') {
+        message = res;
+      } else if (typeof res === 'object' && res) {
+        message = (res as any).message ?? message;
       }
     }
 
     // =========================
-    // POSTGRESQL ERROR
+    // POSTGRES ERROR
     // =========================
-    else if (exception.code) {
+    else if (exception?.code) {
       status = HttpStatus.BAD_REQUEST;
 
       switch (exception.code) {
-        case DB_ERROR_CODE.UNIQUE_VIOLATION:
-          message = 'Duplicate data';
+        case DB_ERROR_CODE.UNIQUE_VIOLATION: {
+          const constraint = exception.constraint;
+          status = HttpStatus.CONFLICT;
+          message =
+            DB_UNIQUE_ERRORS[constraint] ??
+            'Duplicate data';
+
           break;
+        }
 
         case DB_ERROR_CODE.FOREIGN_KEY_VIOLATION:
           message = 'Reference data not found';
@@ -73,12 +74,29 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
 
     // =========================
-    // UNKNOWN ERROR
+    // LOG (CLEANER)
     // =========================
-    else {
-      this.logger.error(exception);
+    if (status === 500) {
+      this.logger.error(
+        {
+          message: exception?.message,
+          code: exception?.code,
+          constraint: exception?.constraint,
+          detail: exception?.detail,
+          stack: exception?.stack,
+        },
+      );
+    } else {
+      this.logger.warn({
+        message,
+        code: exception?.code,
+        constraint: exception?.constraint,
+      });
     }
 
+    // =========================
+    // RESPONSE
+    // =========================
     response.status(status).json({
       success: false,
       message,
