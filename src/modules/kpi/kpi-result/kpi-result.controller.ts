@@ -1,4 +1,4 @@
-import { Controller,Get,Query, } from '@nestjs/common';
+import { Controller, Get, Query, } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { KpiResultService } from './kpi-result.service';
 
@@ -12,17 +12,16 @@ import { KpiResultListItemDto } from './dto/kpi-result-list-item.dto';
 @ApiTags('KPI Result')
 @Controller('kpi-result')
 export class KpiResultController {
-  constructor(private readonly kpiResultService: KpiResultService) {}
+  constructor(private readonly kpiResultService: KpiResultService) { }
 
-   @Get()
+  @Get()
   @ApiOperation({ summary: '[ Get KPI Result List ]' })
   @ApiBaseResponse(PaginatedResponseDto)
   @ResponseMessage('Get KPI Result success')
   async findAll(
     @Query() query: QueryKpiResultDto,
   ): Promise<PaginatedResponseDto<KpiResultListItemDto>> {
-    console.log(query)
     return this.kpiResultService.findAll(query);
   }
-  
+
 }

@@ -3,6 +3,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsOptional,
   IsInt,
+  IsBoolean,
 } from 'class-validator';
 
 import { Type } from 'class-transformer';
@@ -56,6 +57,26 @@ export class QueryKpiResultDto {
   @Type(() => Number)
   @IsInt()
   measureRefId?: number;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Privilege Admin? ',
+  })
+  
+  @Type(() => Boolean)
+  @IsOptional()
+  @IsBoolean()
+  isAdmin?: boolean;
+
+  @ApiPropertyOptional({
+    example: 2,
+    description: 'usersystem role id? ',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  usersystem_role_id?: number;
+
 
   // =========================
   // PAGINATION

@@ -20,10 +20,12 @@ export class KpiResultService {
       userId,
       kpiGroup,
       measureRefId,
+      isAdmin,
+      usersystem_role_id,
       page = 1,
       limit = 10,
     } = query;
-
+    console.log(query)
     const targetYear = year ?? new Date().getFullYear();
 
     // =========================
