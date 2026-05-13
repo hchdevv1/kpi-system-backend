@@ -8,6 +8,7 @@ import { PaginatedResponseDto} from 'src/common/dto/paginated-response.dto';
 import { CreateKpiDefinitionDto } from './dto/create-kpi-definition.dto';
 import { CreateKpiDefinitionResponseDto } from './dto/create-kpi-definition-response.dto';
 import {QueryKpiDefinitionDto} from './dto/query-kpi-definition.dto';
+import {UpdateKpiDefinitionDto} from './dto/update-kpi-definition.dto';
 
 @ApiTags('KPI Definition')
 @Controller('kpi-definition')
@@ -50,7 +51,7 @@ async findAll(
   @ResponseMessage('Patch KPI success')
   async patch(
     @Param('id') id: number,
-    @Body() dto: CreateKpiDefinitionDto,
+    @Body() dto: UpdateKpiDefinitionDto,
   ): Promise<CreateKpiDefinitionResponseDto> {
     return this.kpiDefinitionService.patch(id, dto);
   }

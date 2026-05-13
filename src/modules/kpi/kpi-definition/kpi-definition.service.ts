@@ -29,7 +29,7 @@ import { MstServiceUnit } from '../../service-unit/entities/mst_serviceunit.enti
 import { MstSimple } from '../../simple/entities/mst_simple.entity';
 import { UserSystem } from '../../users/entities/users.entity';
 import { MstKpiRoles } from '../../roles/entities/utils_kpi_roles.entity';
-
+import {UpdateKpiDefinitionDto} from './dto/update-kpi-definition.dto';
 @Injectable()
 export class KpiDefinitionService {
   constructor(private readonly dataSource: DataSource) { }
@@ -601,7 +601,7 @@ export class KpiDefinitionService {
   }
   async patch(
   id: number,
-  dto: CreateKpiDefinitionDto,
+  dto: UpdateKpiDefinitionDto,
 ): Promise<CreateKpiDefinitionResponseDto> {
   return this.dataSource.transaction(async (manager) => {
 
