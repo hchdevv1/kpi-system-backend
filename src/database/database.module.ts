@@ -59,7 +59,7 @@ import {KpiDataEntry} from '../modules/kpi/kpi-data-entry/entities/kpi-data-entr
 
         //autoLoadEntities:true, //auto load entities
         synchronize: false, // 
-        logging: true,
+        logging:  false,
 
         migrations: [__dirname + '/../migrations/*{.ts,.js}'],
         migrationsRun: false,
