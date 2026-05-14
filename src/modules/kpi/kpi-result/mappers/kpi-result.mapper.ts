@@ -6,6 +6,7 @@ import {
   UnitDto,
   ConditionOperatorDto,
   FrequencyDto,
+
 } from '../dto/kpi-result-list-response.dto';
 
 import { LatestResultMap } from '../types/kpi-result.types';
@@ -36,7 +37,12 @@ export class KpiResultMapper {
       topic: entity.topic,
 
       kpiYear: entity.kpi_year,
-
+      measure: entity.measureCategory
+        ? {
+          id: entity.measureCategory?.id,
+          description: entity.measureCategory?.description
+        }
+        : undefined,
       frequency: {
         id: entity.frequency.id,
         description: entity.frequency.description,
@@ -53,10 +59,10 @@ export class KpiResultMapper {
 
       conditionOperator: entity.conditionOperator
         ? ({
-            id: entity.conditionOperator.id,
-            description: entity.conditionOperator.description,
-            symbol: entity.conditionOperator.symbol ?? undefined,
-          } as ConditionOperatorDto)
+          id: entity.conditionOperator.id,
+          description: entity.conditionOperator.description,
+          symbol: entity.conditionOperator.symbol ?? undefined,
+        } as ConditionOperatorDto)
         : undefined,
 
       formula: {
@@ -69,10 +75,10 @@ export class KpiResultMapper {
 
       benchmark: entity.benchmark
         ? {
-            id: entity.benchmark.id,
-            description: entity.benchmark.description,
-            targetValue: entity.benchmark_target_value,
-          }
+          id: entity.benchmark.id,
+          description: entity.benchmark.description,
+          targetValue: entity.benchmark_target_value,
+        }
         : undefined,
 
       // =========================
@@ -116,23 +122,23 @@ export class KpiResultMapper {
       // =========================
 
       userUpdate: latest?.entry?.updatedByUser
-  ? {
-      userId: latest.entry.updatedByUser.id,
+        ? {
+          userId: latest.entry.updatedByUser.id,
 
-      usercode:
-        latest.entry.updatedByUser.usercode,
+          usercode:
+            latest.entry.updatedByUser.usercode,
 
-      description:
-        latest.entry.updatedByUser.description,
+          description:
+            latest.entry.updatedByUser.description,
 
-      roleId: entity.userRoles?.[0]?.role?.id,
+          roleId: entity.userRoles?.[0]?.role?.id,
 
-      roleDescription:
-        entity.userRoles?.[0]?.role?.description,
+          roleDescription:
+            entity.userRoles?.[0]?.role?.description,
 
-      updatedAt: latest.entry.updated_at,
-    }
-  : undefined,
+          updatedAt: latest.entry.updated_at,
+        }
+        : undefined,
 
       // =========================
       // LATEST RESULT
@@ -140,13 +146,13 @@ export class KpiResultMapper {
 
       latestResult: latest?.month
         ? {
-            month: latest.month,
-            year: latest.year!,
-            numeratorValue: latest.numeratorValue!,
-            denominatorValue: latest.denominatorValue,
-            calculatedValue: latest.calculatedValue!,
-            currentPassStatus: latest.currentPassStatus,
-          }
+          month: latest.month,
+          year: latest.year!,
+          numeratorValue: latest.numeratorValue!,
+          denominatorValue: latest.denominatorValue,
+          calculatedValue: latest.calculatedValue!,
+          currentPassStatus: latest.currentPassStatus,
+        }
         : undefined,
 
       // =========================

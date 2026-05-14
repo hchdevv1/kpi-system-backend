@@ -160,9 +160,9 @@ export class LatestResultDto {
   calculatedValue!: number;
 
   @ApiPropertyOptional({
-  description: 'Current KPI evaluation status',
-  example: true,
-})
+    description: 'Current KPI evaluation status',
+    example: true,
+  })
   currentPassStatus?: boolean;
 }
 
@@ -185,6 +185,9 @@ export class KpiResultListResponseDto {
 
   @ApiProperty()
   kpiYear!: number;
+
+  @ApiPropertyOptional({ type: IdNameDto })
+  measure?: IdNameDto;
 
   @ApiProperty({ type: FrequencyDto })
   frequency!: FrequencyDto;
@@ -238,10 +241,10 @@ export class KpiResultListResponseDto {
   // STATUS
   // =========================
 
- 
+
   @ApiPropertyOptional({
-  description: 'KPI evaluation status',
-  example: true,
-})
+    description: 'KPI evaluation status',
+    example: true,
+  })
   isPass?: boolean;
 }

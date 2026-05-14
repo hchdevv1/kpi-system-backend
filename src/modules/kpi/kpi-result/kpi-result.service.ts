@@ -27,7 +27,7 @@ export class KpiResultService {
 
     @InjectRepository(KpiDataEntry)
     private readonly entryRepo: Repository<KpiDataEntry>,
-  ) {}
+  ) { }
 
   async findAll(query: QueryKpiResultDto) {
     // =========================
@@ -54,6 +54,11 @@ export class KpiResultService {
       .leftJoinAndSelect(
         'kpi.frequency',
         'frequency',
+      )
+
+      .leftJoinAndSelect(
+        'kpi.measureCategory',
+        'measureCategory',
       )
 
       .leftJoinAndSelect('kpi.unit', 'unit')
@@ -375,7 +380,7 @@ export class KpiResultService {
           calculatedValue,
           kpi.targetValue,
           kpi.conditionOperator?.symbol ??
-            undefined,
+          undefined,
         );
 
       // =========================
