@@ -1,13 +1,31 @@
-import { LatestResultDto } from '../dto/kpi-result-list-response.dto';
+import { KpiDataEntry } from '../../kpi-data-entry/entities/kpi-data-entry.entity';
 
 export interface LatestMapValue {
-  month: number;
-  year: number;
-  numeratorValue: number;
+  // =========================
+  // LATEST RESULT
+  // =========================
+
+  month?: number;
+  year?: number;
+
+  numeratorValue?: number;
   denominatorValue?: number;
-  calculatedValue: number;
+
+  calculatedValue?: number;
+
   currentPassStatus?: boolean;
-  yearlyCalculated?: number;
+
+  // =========================
+  // YEARLY AGGREGATE
+  // =========================
+
+  yearlyCalculated: number;
+
+  // =========================
+  // LATEST ENTRY OBJECT
+  // =========================
+
+  entry?: KpiDataEntry | null;
 }
 
 export type LatestResultMap = Map<number, LatestMapValue>;

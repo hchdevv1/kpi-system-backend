@@ -16,6 +16,9 @@ export class KpiResultController {
    @Get()
   @ApiBaseResponse(KpiResultListResponseDto, { isArray: true })
   async findAll(@Query() query: QueryKpiResultDto) {
+    console.log(query)
+    console.log(typeof query.editKpiUser);
+    console.log('------')
     return this.kpiResultService.findAll(query);
   }
 

@@ -1,6 +1,8 @@
+// src/modules/kpi/kpi-result/kpi-result.service.ts
+
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
 import { KpiCalculationService } from './services/kpi-calculation.service';
 import { KpiResultMapper } from './mappers/kpi-result.mapper';
@@ -9,6 +11,11 @@ import { QueryKpiResultDto } from './dto/query-kpi-result.dto';
 
 import { KpiDefinition } from '../kpi-definition/entities/kpi-definition.entity';
 import { KpiDataEntry } from '../kpi-data-entry/entities/kpi-data-entry.entity';
+
+import {
+  LatestMapValue,
+  LatestResultMap,
+} from './types/kpi-result.types';
 
 @Injectable()
 export class KpiResultService {
@@ -24,108 +31,389 @@ export class KpiResultService {
 
   async findAll(query: QueryKpiResultDto) {
     // =========================
-    // YEAR DEFAULT
+    // DEFAULT
     // =========================
-    const year = query.year ?? new Date().getFullYear();
+    const year =
+      query.year ?? new Date().getFullYear();
+
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
 
     // =========================
-    // 1. LOAD KPI DEFINITION
+    // QUERY BUILDER
     // =========================
-    const kpis = await this.kpiRepo.find({
-      relations: [
-        'topic',
+    const qb = this.kpiRepo
+      .createQueryBuilder('kpi')
+      .distinct(true)
+
+      // =========================
+      // RELATIONS
+      // =========================
+      .leftJoinAndSelect('kpi.topic', 'topic')
+
+      .leftJoinAndSelect(
+        'kpi.frequency',
         'frequency',
-        'unit',
+      )
+
+      .leftJoinAndSelect('kpi.unit', 'unit')
+
+      .leftJoinAndSelect(
+        'kpi.conditionOperator',
         'conditionOperator',
+      )
+
+      .leftJoinAndSelect(
+        'kpi.benchmark',
         'benchmark',
-        'kpiStrategies.strategy.strategyGroup',
-        'kpiOrganizations.organization.organizationGroup',
-        'kpiServiceUnits.serviceUnit.serviceUnitGroup',
-        'kpiSimples.simple.kpisimplegroup',
-      ],
+      )
+
+      // =========================
+      // STRATEGY
+      // =========================
+      .leftJoinAndSelect(
+        'kpi.kpiStrategies',
+        'kpiStrategies',
+      )
+
+      .leftJoinAndSelect(
+        'kpiStrategies.strategy',
+        'strategy',
+      )
+
+      .leftJoinAndSelect(
+        'strategy.strategyGroup',
+        'strategyGroup',
+      )
+
+      // =========================
+      // ORGANIZATION
+      // =========================
+      .leftJoinAndSelect(
+        'kpi.kpiOrganizations',
+        'kpiOrganizations',
+      )
+
+      .leftJoinAndSelect(
+        'kpiOrganizations.organization',
+        'organization',
+      )
+
+      .leftJoinAndSelect(
+        'organization.organizationGroup',
+        'organizationGroup',
+      )
+
+      // =========================
+      // SERVICE UNIT
+      // =========================
+      .leftJoinAndSelect(
+        'kpi.kpiServiceUnits',
+        'kpiServiceUnits',
+      )
+
+      .leftJoinAndSelect(
+        'kpiServiceUnits.serviceUnit',
+        'serviceUnit',
+      )
+
+      .leftJoinAndSelect(
+        'serviceUnit.serviceUnitGroup',
+        'serviceUnitGroup',
+      )
+
+      // =========================
+      // SIMPLE
+      // =========================
+      .leftJoinAndSelect(
+        'kpi.kpiSimples',
+        'kpiSimples',
+      )
+
+      .leftJoinAndSelect(
+        'kpiSimples.simple',
+        'simple',
+      )
+
+      .leftJoinAndSelect(
+        'simple.kpisimplegroup',
+        'simpleGroup',
+      )
+
+      // =========================
+      // USER ROLE
+      // =========================
+      .leftJoinAndSelect(
+        'kpi.userRoles',
+        'userRoles',
+      )
+
+      .leftJoinAndSelect(
+        'userRoles.role',
+        'role',
+      )
+
+      .leftJoinAndSelect(
+        'userRoles.user',
+        'roleUser',
+      );
+
+    // =========================
+    // FILTER : YEAR
+    // =========================
+    qb.andWhere('kpi.kpi_year = :year', {
+      year,
     });
 
+    // =========================
+    // FILTER : USER
+    // =========================
+    if (
+      query.userId &&
+      query.editKpiUser === false
+    ) {
+      qb.andWhere(
+        'userRoles.userId = :userId',
+        {
+          userId: query.userId,
+        },
+      );
+    }
+
+    // =========================
+    // FILTER : ADMIN
+    // =========================
+    if (
+      query.userId &&
+      query.editKpiUser === true
+    ) {
+      qb.andWhere(
+        'userRoles.userId != :userId',
+        {
+          userId: query.userId,
+        },
+      );
+    }
+
+    // =========================
+    // FILTER : MEASURE
+    // =========================
+    if (query.measureRefId) {
+      qb.andWhere(
+        'kpi.measure_ref_id = :measureRefId',
+        {
+          measureRefId: query.measureRefId,
+        },
+      );
+    }
+
+    // =========================
+    // FILTER : KPI GROUP
+    // =========================
+    if (query.kpiGroup) {
+      switch (query.kpiGroup) {
+        // =====================
+        // STRATEGY
+        // =====================
+        case 'strategy':
+          qb.innerJoin(
+            'kpi.kpiStrategies',
+            'ks',
+          );
+          break;
+
+        // =====================
+        // ORGANIZATION
+        // =====================
+        case 'organization':
+          qb.innerJoin(
+            'kpi.kpiOrganizations',
+            'ko',
+          );
+          break;
+
+        // =====================
+        // SIMPLE
+        // =====================
+        case 'simple':
+          qb.innerJoin(
+            'kpi.kpiSimples',
+            'ksm',
+          );
+          break;
+
+        // =====================
+        // SERVICE UNIT GROUP
+        // =====================
+        case 'PCT':
+        case 'CoE':
+        case 'Location':
+          qb.innerJoin(
+            'kpi.kpiServiceUnits',
+            'ksu',
+          )
+            .innerJoin(
+              'ksu.serviceUnit',
+              'su',
+            )
+            .innerJoin(
+              'su.serviceUnitGroup',
+              'sug',
+            )
+            .andWhere(
+              'sug.description = :group',
+              {
+                group: query.kpiGroup,
+              },
+            );
+          break;
+      }
+    }
+
+    // =========================
+    // PAGINATION
+    // =========================
+    qb.skip((page - 1) * limit);
+    qb.take(limit);
+
+    // =========================
+    // EXECUTE
+    // =========================
+    const [kpis] =
+      await qb.getManyAndCount();
+
+    // =========================
+    // KPI IDs
+    // =========================
     const kpiIds = kpis.map((k) => k.id);
 
-    // =========================
-    // 2. SQL AGGREGATION (FAST)
-    // =========================
-    const aggregates = await this.entryRepo
-      .createQueryBuilder('e')
-      .select('e.kpiDefinitionId', 'kpiId')
-      .addSelect('SUM(e.numeratorValue)', 'numeratorSum')
-      .addSelect('SUM(e.denominatorValue)', 'denominatorSum')
-      .addSelect('MAX(e.kpiDefMonth)', 'lastMonth')
-      .where('e.kpiDefinitionId IN (:...kpiIds)', { kpiIds })
-      .andWhere('e.kpiDefYear = :year', { year })
-      .groupBy('e.kpiDefinitionId')
-      .getRawMany();
-
-    const aggregateMap = new Map<number, any>();
-
-    for (const a of aggregates) {
-      aggregateMap.set(Number(a.kpiId), {
-        numeratorSum: Number(a.numeratorSum ?? 0),
-        denominatorSum: Number(a.denominatorSum ?? 0),
-        lastMonth: Number(a.lastMonth ?? 0),
-      });
+    if (kpiIds.length === 0) {
+      return [];
     }
 
     // =========================
-    // 3. BUILD RESULT
+    // LOAD DATA ENTRY
     // =========================
-    const latestResultMap = new Map<number, any>();
+    const entries = await this.entryRepo.find({
+      where: {
+        kpiDefinitionId: In(kpiIds),
+        kpiDefYear: year,
+      },
+      relations: [
+        'updatedByUser',
+      ],
+      order: {
+        kpiDefMonth: 'ASC',
+      },
+    });
 
-    for (const kpi of kpis) {
-      const agg = aggregateMap.get(kpi.id);
+    // =========================
+    // GROUP ENTRY
+    // =========================
+    const entryMap =
+      new Map<number, KpiDataEntry[]>();
 
-      let yearlyCalculated = 0;
-      let latest = null;
-
-      if (agg) {
-        const numeratorSum = agg.numeratorSum;
-        const denominatorSum = agg.denominatorSum;
-
-        const unit = kpi.unit;
-
-        // =========================
-        // KPI RULE ENGINE (U001/U002/U003)
-        // =========================
-        if (unit.code === 'U001') {
-          yearlyCalculated = numeratorSum;
-        } else if (denominatorSum === 0) {
-          yearlyCalculated = 0;
-        } else {
-          const multiplier = Number(unit.scale_factor ?? 1);
-          yearlyCalculated =
-            (numeratorSum / denominatorSum) * multiplier;
-        }
-
-        const currentPassStatus =
-          this.calc.calculateCurrentPassStatus(
-            yearlyCalculated,
-            kpi.targetValue,
-            kpi.conditionOperator?.symbol ?? undefined,
-          );
-
-        latest = {
-          month: agg.lastMonth,
-          year,
-          numeratorValue: numeratorSum,
-          denominatorValue: denominatorSum,
-          calculatedValue: yearlyCalculated,
-          currentPassStatus,
-        };
+    for (const entry of entries) {
+      if (
+        !entryMap.has(entry.kpiDefinitionId)
+      ) {
+        entryMap.set(
+          entry.kpiDefinitionId,
+          [],
+        );
       }
 
-      latestResultMap.set(kpi.id, {
-        ...latest,
-        yearlyCalculated,
-      });
+      entryMap
+        .get(entry.kpiDefinitionId)!
+        .push(entry);
     }
 
     // =========================
-    // 4. MAP RESPONSE
+    // BUILD RESULT MAP
+    // =========================
+    const latestResultMap: LatestResultMap =
+      new Map();
+
+    for (const kpi of kpis) {
+      const kpiEntries =
+        entryMap.get(kpi.id) ?? [];
+
+      if (kpiEntries.length === 0) {
+        latestResultMap.set(kpi.id, {
+          month: 0,
+          year,
+          numeratorValue: 0,
+          denominatorValue: 0,
+          calculatedValue: 0,
+          currentPassStatus: false,
+          yearlyCalculated: 0,
+        });
+
+        continue;
+      }
+
+      // =========================
+      // LATEST ENTRY
+      // =========================
+      const latestEntry =
+        kpiEntries[kpiEntries.length - 1];
+
+      // =========================
+      // LATEST VALUE
+      // =========================
+      const calculatedValue =
+        this.calc.calculateValue(
+          latestEntry,
+          kpi.unit,
+        );
+
+      // =========================
+      // PASS STATUS
+      // =========================
+      const currentPassStatus =
+        this.calc.calculateCurrentPassStatus(
+          calculatedValue,
+          kpi.targetValue,
+          kpi.conditionOperator?.symbol ??
+            undefined,
+        );
+
+      // =========================
+      // YEARLY AGGREGATE
+      // =========================
+      const yearlyCalculated =
+        this.calc.calculateYearlyAggregate(
+          kpiEntries,
+          kpi.unit,
+        );
+
+      const latestValue: LatestMapValue = {
+        month: latestEntry.kpiDefMonth,
+        year: latestEntry.kpiDefYear,
+
+        numeratorValue:
+          latestEntry.numeratorValue,
+
+        denominatorValue:
+          latestEntry.denominatorValue,
+
+        calculatedValue,
+
+        currentPassStatus,
+
+        yearlyCalculated,
+
+        entry: latestEntry,
+      };
+
+      latestResultMap.set(
+        kpi.id,
+        latestValue,
+      );
+    }
+
+    // =========================
+    // RESPONSE
     // =========================
     return KpiResultMapper.toResponseList(
       kpis,

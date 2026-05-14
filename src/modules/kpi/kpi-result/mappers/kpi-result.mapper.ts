@@ -1,10 +1,13 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 import { KpiDefinition } from '../../kpi-definition/entities/kpi-definition.entity';
+
 import {
   KpiResultListResponseDto,
   UnitDto,
   ConditionOperatorDto,
   FrequencyDto,
 } from '../dto/kpi-result-list-response.dto';
+
 import { LatestResultMap } from '../types/kpi-result.types';
 
 export class KpiResultMapper {
@@ -26,7 +29,12 @@ export class KpiResultMapper {
     return {
       id: entity.id,
 
+      // =========================
+      // KPI STATIC
+      // =========================
+
       topic: entity.topic,
+
       kpiYear: entity.kpi_year,
 
       frequency: {
@@ -67,6 +75,10 @@ export class KpiResultMapper {
           }
         : undefined,
 
+      // =========================
+      // MAPPINGS
+      // =========================
+
       strategies:
         entity.kpiStrategies?.map((m) => ({
           id: m.strategy.id,
@@ -99,20 +111,51 @@ export class KpiResultMapper {
           simpleGroup: m.simple.kpisimplegroup,
         })) ?? [],
 
-      userUpdate: undefined,
+      // =========================
+      // USER UPDATE
+      // =========================
 
-      latestResult: latest
+      userUpdate: latest?.entry?.updatedByUser
+  ? {
+      userId: latest.entry.updatedByUser.id,
+
+      usercode:
+        latest.entry.updatedByUser.usercode,
+
+      description:
+        latest.entry.updatedByUser.description,
+
+      roleId: entity.userRoles?.[0]?.role?.id,
+
+      roleDescription:
+        entity.userRoles?.[0]?.role?.description,
+
+      updatedAt: latest.entry.updated_at,
+    }
+  : undefined,
+
+      // =========================
+      // LATEST RESULT
+      // =========================
+
+      latestResult: latest?.month
         ? {
             month: latest.month,
-            year: latest.year,
-            numeratorValue: latest.numeratorValue,
+            year: latest.year!,
+            numeratorValue: latest.numeratorValue!,
             denominatorValue: latest.denominatorValue,
-            calculatedValue: latest.calculatedValue,
+            calculatedValue: latest.calculatedValue!,
             currentPassStatus: latest.currentPassStatus,
           }
         : undefined,
 
-      isPass: yearlyCalculated >= (entity.targetValue ?? 0),
+      // =========================
+      // YEAR STATUS
+      // =========================
+
+      isPass:
+        yearlyCalculated >=
+        (entity.targetValue ?? 0),
     };
   }
 }

@@ -24,7 +24,7 @@ import { UserSystem } from '../../../users/entities/users.entity';
 @Index(['kpiDefinitionId'])
 @Index(['kpiDefYear'])
 @Index(['kpiDefMonth'])
-
+@Index(['updatedBy']) // เพิ่ม
 export class KpiDataEntry {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -63,14 +63,12 @@ export class KpiDataEntry {
   // Raw KPI Values
   // =========================
 
-  // required
   @Column({
     name: 'numerator_value',
     type: 'double precision',
   })
   numeratorValue!: number;
 
-  // nullable
   @Column({
     name: 'denominator_value',
     type: 'double precision',
@@ -90,6 +88,7 @@ export class KpiDataEntry {
 
   @ManyToOne(() => UserSystem, {
     nullable: true,
+    eager: false,
   })
   @JoinColumn({ name: 'created_by' })
   createdByUser?: UserSystem;
@@ -102,6 +101,7 @@ export class KpiDataEntry {
 
   @ManyToOne(() => UserSystem, {
     nullable: true,
+    eager: false,
   })
   @JoinColumn({ name: 'updated_by' })
   updatedByUser?: UserSystem;

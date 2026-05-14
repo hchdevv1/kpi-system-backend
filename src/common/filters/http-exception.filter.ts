@@ -66,10 +66,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
           break;
 
         default:
-          message =
-            process.env.NODE_ENV === 'development'
-              ? exception.detail || exception.message
-              : 'Database error';
+          
+          message = exception.message
+            // process.env.NODE_ENV === 'development'
+            //   ? exception.detail || exception.message
+            //   : 'Database error';
       }
     }
 

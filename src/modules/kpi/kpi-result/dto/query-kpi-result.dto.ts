@@ -3,10 +3,11 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsOptional,
   IsInt,
-  IsBoolean,
+  IsBoolean
+  
 } from 'class-validator';
 
-import { Type } from 'class-transformer';
+import { Type ,Transform} from 'class-transformer';
 
 export class QueryKpiResultDto {
   // =========================
@@ -63,10 +64,10 @@ export class QueryKpiResultDto {
     description: 'Privilege Admin? ',
   })
   
-  @Type(() => Boolean)
+ @Transform(({ value }) => value === true || value === 'true')
   @IsOptional()
   @IsBoolean()
-  isAdmin?: boolean;
+  editKpiUser?: boolean;
 
   @ApiPropertyOptional({
     example: 2,
