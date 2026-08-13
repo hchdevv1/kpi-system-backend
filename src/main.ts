@@ -19,14 +19,9 @@ async function bootstrap() {
     }),
   );
   app.enableCors({
-  origin: '*' /*[
-    
-    //'https://your-frontend.com',
-    // 'https://admin.your-frontend.com',
-  ]*/,
-  methods: 'GET,POST,PUT,PATCH',
-  credentials: true,
-});
+    origin: true,
+    credentials: true,
+  });
   const config = new DocumentBuilder()
     .setTitle('KPI System API')
     .setDescription('API for KPI System')

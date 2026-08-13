@@ -22,15 +22,4 @@ export class KpiResultController {
     return this.kpiResultService.findAll(query);
   }
 
-/*
-  @Get()
-  @ApiOperation({ summary: '[ Get KPI Result List ]' })
-  @ApiBaseResponse(PaginatedResponseDto)
-  @ResponseMessage('Get KPI Result success')
-  async findAll(
-    @Query() query: QueryKpiResultDto,
-  ): Promise<PaginatedResponseDto<KpiResultListItemDto>> {
-    return this.kpiResultService.findAll(query);
-  }
-*/
 }

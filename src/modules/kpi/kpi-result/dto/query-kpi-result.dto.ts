@@ -78,6 +78,14 @@ export class QueryKpiResultDto {
   @IsInt()
   usersystem_role_id?: number;
 
+    @ApiPropertyOptional({
+    example: 2,
+    description: 'service unit id? ',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  serviceunit_id?: number;
 
   // =========================
   // PAGINATION

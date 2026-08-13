@@ -200,6 +200,24 @@ export class KpiResultService {
       );
     }
 
+// FILTER : SERVICE UNIT
+// =========================
+// =========================
+// FILTER : SERVICE UNIT
+// =========================
+if (query.serviceunit_id) {
+  qb.innerJoin(
+    'kpi.kpiServiceUnits',
+    'filterServiceUnit',
+  );
+
+  qb.andWhere(
+    'filterServiceUnit.serviceUnitId = :serviceunitId',
+    {
+      serviceunitId: query.serviceunit_id,
+    },
+  );
+}
     // =========================
     // FILTER : MEASURE
     // =========================
@@ -211,7 +229,6 @@ export class KpiResultService {
         },
       );
     }
-
     // =========================
     // FILTER : KPI GROUP
     // =========================
