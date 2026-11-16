@@ -9,6 +9,7 @@ import { CreateKpiDefinitionDto } from './dto/create-kpi-definition.dto';
 import { CreateKpiDefinitionResponseDto } from './dto/create-kpi-definition-response.dto';
 import {QueryKpiDefinitionDto} from './dto/query-kpi-definition.dto';
 import {UpdateKpiDefinitionDto} from './dto/update-kpi-definition.dto';
+import { QueryKpiDefinitionByIdDto } from './dto/query-kpi-definition-by-id.dto';
 
 @ApiTags('KPI Definition')
 @Controller('kpi-definition')
@@ -25,15 +26,22 @@ async findAll(
   return this.kpiDefinitionService.findAll(query);
 }
 
-  @Get(':id')
-  @ApiOperation({ summary: '[ Get KPI By Id ]' })
-  @ApiBaseResponse(CreateKpiDefinitionResponseDto)
-  @ResponseMessage('Get KPI by id success')
-  async findById(
-    @Param('id') id: number,
-  ): Promise<CreateKpiDefinitionResponseDto> {
-    return this.kpiDefinitionService.findById(id);
-  }
+ 
+
+@Get('byid')
+@ApiOperation({ summary: '[ Get KPI By Id ]' })
+@ApiBaseResponse(CreateKpiDefinitionResponseDto)
+@ResponseMessage('Get KPI by id success')
+async findById(
+  @Query() query: QueryKpiDefinitionByIdDto,
+): Promise<CreateKpiDefinitionResponseDto> {
+  return this.kpiDefinitionService.findById(
+    query.id,
+    query.usercode,
+  );
+}
+
+
 
   @Post()
   @ApiOperation({ summary: '[ Create KPI ]' })

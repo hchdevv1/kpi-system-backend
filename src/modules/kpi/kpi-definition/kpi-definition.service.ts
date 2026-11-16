@@ -246,7 +246,7 @@ export class KpiDefinitionService {
       return KpiMapper.toCreateResponse(full);
     });
   }
-  async findAll(
+  async findAllold(
     query: QueryKpiDefinitionDto,
   ): Promise<{
     items: CreateKpiDefinitionResponseDto[];
@@ -393,6 +393,188 @@ export class KpiDefinitionService {
       },
     };
   }
+
+async findAll(
+  query: QueryKpiDefinitionDto,
+): Promise<{
+  items: CreateKpiDefinitionResponseDto[];
+  meta: { page: number; limit: number; total: number };
+}> {
+  const {
+    year,
+    measureRefId,
+    kpiGroup,
+    usercode,
+    page = 1,
+    limit = 10,
+  } = query;
+
+  const currentYear = new Date().getFullYear();
+
+  // =========================
+  // USER ACCESS FILTER
+  // =========================
+
+  // No usercode: return empty list
+  if (!usercode?.trim()) {
+    return {
+      items: [],
+      meta: { page, limit, total: 0 },
+    };
+  }
+
+  // Find user by usercode
+  const user = await this.dataSource
+    .getRepository(UserSystem)
+    .findOne({
+      where: { usercode: usercode.trim() },
+    });
+
+  // User not found: return empty list
+  if (!user) {
+    return {
+      items: [],
+      meta: { page, limit, total: 0 },
+    };
+  }
+
+  const qb = this.dataSource
+    .getRepository(KpiDefinition)
+    .createQueryBuilder('kpi');
+
+  // =========================
+  // RELATIONS (EXISTING)
+  // =========================
+  qb.leftJoinAndSelect('kpi.topic', 'topic');
+  qb.leftJoinAndSelect('kpi.measureCategory', 'measureCategory');
+  qb.leftJoinAndSelect('kpi.frequency', 'frequency');
+  qb.leftJoinAndSelect('kpi.unit', 'unit');
+  qb.leftJoinAndSelect('kpi.conditionOperator', 'conditionOperator');
+  qb.leftJoinAndSelect('kpi.benchmark', 'benchmark');
+
+  qb.leftJoinAndSelect('kpi.kpiStrategies', 'kpiStrategies');
+  qb.leftJoinAndSelect('kpiStrategies.strategy', 'strategy');
+  qb.leftJoinAndSelect('strategy.strategyGroup', 'strategyGroup');
+
+  qb.leftJoinAndSelect('kpi.kpiOrganizations', 'kpiOrganizations');
+  qb.leftJoinAndSelect('kpiOrganizations.organization', 'organization');
+  qb.leftJoinAndSelect('organization.organizationGroup', 'organizationGroup');
+
+  qb.leftJoinAndSelect('kpi.kpiServiceUnits', 'kpiServiceUnits');
+  qb.leftJoinAndSelect('kpiServiceUnits.serviceUnit', 'serviceUnit');
+  qb.leftJoinAndSelect('serviceUnit.serviceUnitGroup', 'serviceUnitGroup');
+
+  qb.leftJoinAndSelect('kpi.kpiSimples', 'kpiSimples');
+  qb.leftJoinAndSelect('kpiSimples.simple', 'simple');
+  qb.leftJoinAndSelect('simple.kpisimplegroup', 'simpleGroup');
+
+  qb.leftJoinAndSelect('kpi.userRoles', 'userRoles');
+  qb.leftJoinAndSelect('userRoles.user', 'user');
+  qb.leftJoinAndSelect('userRoles.role', 'role');
+
+  // =========================
+  // FILTER: USER ACCESS
+  // =========================
+
+  // System admin (role ID 4): all KPIs
+  if (user.usersystem_role_id !== 4) {
+    qb.andWhere(
+      `EXISTS (
+        SELECT 1
+        FROM kpi_user_roles_mappings AS userAccess
+        WHERE userAccess.kpi_id = kpi.id
+          AND userAccess.user_id = :userId
+      )`,
+      { userId: user.id },
+    );
+  }
+
+  // =========================
+  // FILTER: YEAR (EXISTING)
+  // =========================
+  qb.andWhere('kpi.kpi_year = :year', {
+    year: year ?? currentYear,
+  });
+
+  // =========================
+  // FILTER: MEASURE (EXISTING)
+  // =========================
+  if (measureRefId) {
+    qb.andWhere('kpi.measure_ref_id = :measureRefId', {
+      measureRefId,
+    });
+  }
+
+  // =========================
+  // KPI GROUP FILTER (EXISTING)
+  // =========================
+  if (kpiGroup) {
+    switch (kpiGroup) {
+      case 'strategy':
+        qb.innerJoin('kpi.kpiStrategies', 'ks');
+        break;
+
+      case 'organization':
+        qb.innerJoin('kpi.kpiOrganizations', 'ko');
+        break;
+
+      case 'simple':
+        qb.innerJoin('kpi.kpiSimples', 'ksm');
+        break;
+
+      case 'PCT':
+      case 'CoE':
+      case 'Location':
+        qb.innerJoin('kpi.kpiServiceUnits', 'ksu')
+          .innerJoin('ksu.serviceUnit', 'su')
+          .innerJoin('su.serviceUnitGroup', 'sug')
+          .andWhere('sug.description = :group', {
+            group: kpiGroup,
+          });
+        break;
+    }
+  }
+
+  // =========================
+  // ACTIVE ONLY (EXISTING)
+  // =========================
+  qb.andWhere('kpi.is_active = true');
+
+  // =========================
+  // DISTINCT (EXISTING)
+  // =========================
+  qb.distinct(true);
+
+  // =========================
+  // PAGINATION (EXISTING)
+  // =========================
+  qb.skip((page - 1) * limit).take(limit);
+
+  // =========================
+  // ORDER (EXISTING)
+  // =========================
+  qb.orderBy('kpi.id', 'DESC');
+
+  // =========================
+  // EXECUTE (EXISTING)
+  // =========================
+  const [data, total] = await qb.getManyAndCount();
+
+  // =========================
+  // MAP (EXISTING)
+  // =========================
+  const items = KpiMapper.toCreateResponseArray(data);
+
+  return {
+    items,
+    meta: {
+      page,
+      limit,
+      total,
+    },
+  };
+}
+
   async findAll2(): Promise<CreateKpiDefinitionResponseDto[]> {
     const entities = await this.dataSource.getRepository(KpiDefinition).find({
       relations: {
@@ -417,8 +599,34 @@ export class KpiDefinitionService {
 
     return KpiMapper.toCreateResponseArray(entities);
   }
-  async findById(id: number): Promise<CreateKpiDefinitionResponseDto> {
-    const entity = await this.dataSource.getRepository(KpiDefinition).findOne({
+  
+async findById(
+  id: number,
+  usercode: string,
+): Promise<CreateKpiDefinitionResponseDto> {
+  // =========================
+  // 1. VALIDATE USER
+  // =========================
+  if (!usercode?.trim()) {
+    throw new NotFoundException(`KPI ID ${id} not found`);
+  }
+
+  const user = await this.dataSource
+    .getRepository(UserSystem)
+    .findOne({
+      where: { usercode: usercode.trim() },
+    });
+
+  if (!user) {
+    throw new NotFoundException(`KPI ID ${id} not found`);
+  }
+
+  // =========================
+  // 2. FIND KPI
+  // =========================
+  const entity = await this.dataSource
+    .getRepository(KpiDefinition)
+    .findOne({
       where: { id },
       relations: {
         topic: true,
@@ -437,12 +645,34 @@ export class KpiDefinitionService {
       },
     });
 
-    if (!entity) {
-      throw new BadRequestException(`KPI ID ${id} not found`);
-    }
-
-    return KpiMapper.toCreateResponse(entity);
+  if (!entity) {
+    throw new NotFoundException(`KPI ID ${id} not found`);
   }
+
+  // =========================
+  // 3. VALIDATE KPI ACCESS
+  // =========================
+  if (user.usersystem_role_id !== 4) {
+    const mapping = await this.dataSource
+      .getRepository(KpiUserRolesMappings)
+      .findOne({
+        where: {
+          kpiId: id,
+          userId: user.id,
+        },
+      });
+
+    if (!mapping) {
+      throw new NotFoundException(`KPI ID ${id} not found`);
+    }
+  }
+
+  // =========================
+  // 4. RETURN EXISTING RESPONSE
+  // =========================
+  return KpiMapper.toCreateResponse(entity);
+}
+
   async patch2(
     id: number,
     dto: CreateKpiDefinitionDto,

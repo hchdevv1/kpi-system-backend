@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsInt } from 'class-validator';
+import { IsOptional, IsInt ,IsString} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class QueryKpiDefinitionDto {
@@ -22,7 +22,13 @@ kpiGroup?: 'strategy' | 'organization' | 'simple' | 'PCT' | 'CoE' | 'Location';
   @IsInt()
   measureRefId?: number;
 
-
+@ApiPropertyOptional({
+  description: 'User code for filtering KPI visibility',
+  example: '6110189',
+})
+@IsOptional()
+@IsString()
+usercode?: string;
 
   // =========================
   // PAGINATION

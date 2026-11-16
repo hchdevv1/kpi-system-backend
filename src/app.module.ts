@@ -24,6 +24,7 @@ import { KpiStrategyMappingsModule } from './modules/kpi_old/kpi-strategy-mappin
 import { KpiDefinitionModule } from './modules/kpi/kpi-definition/kpi-definition.module';
 import { KpiDataEntryModule } from './modules/kpi/kpi-data-entry/kpi-data-entry.module';
 import { KpiResultModule } from './modules/kpi/kpi-result/kpi-result.module';
+import { KpiSummaryModule } from './modules/kpi/kpi-summary/kpi-summary.module';
 
 @Module({
   imports: [ ConfigModule.forRoot({
@@ -52,6 +53,7 @@ import { KpiResultModule } from './modules/kpi/kpi-result/kpi-result.module';
     KpiDefinitionModule,
     KpiDataEntryModule,
     KpiResultModule,
+    KpiSummaryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

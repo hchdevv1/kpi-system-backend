@@ -1,6 +1,6 @@
 // src/modules/kpi/kpi-result/kpi-result.service.ts
 
-import { Injectable } from '@nestjs/common';
+import { Injectable ,NotFoundException} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 
@@ -11,6 +11,14 @@ import { QueryKpiResultDto } from './dto/query-kpi-result.dto';
 
 import { KpiDefinition } from '../kpi-definition/entities/kpi-definition.entity';
 import { KpiDataEntry } from '../kpi-data-entry/entities/kpi-data-entry.entity';
+
+import { MonthlyKpiResultRequestDto } from './dto/monthly-kpi-result-request.dto';
+import {
+  MonthlyKpiResultResponseDto,
+  MonthlyKpiDefinitionDto,
+  MonthlyKpiAssignedUserDto,
+  MonthlyKpiResultItemDto,
+} from './dto/monthly-kpi-result-response.dto';
 
 import {
   LatestMapValue,
@@ -442,4 +450,180 @@ if (query.serviceunit_id) {
       latestResultMap,
     );
   }
+
+  async findMonthly(
+    request: MonthlyKpiResultRequestDto,
+  ): Promise<MonthlyKpiResultResponseDto> {
+    const { kpiDefinitionId, year } = request;
+
+    const kpi = await this.kpiRepo
+      .createQueryBuilder('kpi')
+      .leftJoinAndSelect('kpi.topic', 'topic')
+      .leftJoinAndSelect('kpi.frequency', 'frequency')
+      .leftJoinAndSelect('kpi.measureCategory', 'measureCategory')
+      .leftJoinAndSelect('kpi.unit', 'unit')
+      .leftJoinAndSelect('kpi.conditionOperator', 'conditionOperator')
+      .leftJoinAndSelect('kpi.benchmark', 'benchmark')
+      .leftJoinAndSelect('kpi.kpiStrategies', 'kpiStrategies')
+      .leftJoinAndSelect('kpiStrategies.strategy', 'strategy')
+      .leftJoinAndSelect('strategy.strategyGroup', 'strategyGroup')
+      .leftJoinAndSelect('kpi.kpiOrganizations', 'kpiOrganizations')
+      .leftJoinAndSelect('kpiOrganizations.organization', 'organization')
+      .leftJoinAndSelect(
+        'organization.organizationGroup',
+        'organizationGroup',
+      )
+      .leftJoinAndSelect('kpi.kpiServiceUnits', 'kpiServiceUnits')
+      .leftJoinAndSelect('kpiServiceUnits.serviceUnit', 'serviceUnit')
+      .leftJoinAndSelect(
+        'serviceUnit.serviceUnitGroup',
+        'serviceUnitGroup',
+      )
+      .leftJoinAndSelect('kpi.kpiSimples', 'kpiSimples')
+      .leftJoinAndSelect('kpiSimples.simple', 'simple')
+      .leftJoinAndSelect('simple.kpisimplegroup', 'simpleGroup')
+      .leftJoinAndSelect('kpi.userRoles', 'userRoles')
+      .leftJoinAndSelect('userRoles.role', 'role')
+      .leftJoinAndSelect('userRoles.user', 'assignedUser')
+      .where('kpi.id = :kpiDefinitionId', { kpiDefinitionId })
+      .getOne();
+
+    if (!kpi) {
+      throw new NotFoundException(
+        `KPI Definition ID ${kpiDefinitionId} not found`,
+      );
+    }
+
+    const entries = await this.entryRepo.find({
+      where: {
+        kpiDefinitionId,
+        kpiDefYear: year,
+      },
+      order: {
+        kpiDefMonth: 'ASC',
+      },
+    });
+
+    const assignedUsers: MonthlyKpiAssignedUserDto[] =
+      (kpi.userRoles ?? []).map((mapping) => ({
+        userId: mapping.userId,
+        usercode: mapping.user?.usercode ?? '',
+        description: mapping.user?.description ?? '',
+        roleId: mapping.roleId,
+        roleDescription: mapping.role?.description ?? '',
+      }));
+
+    const kpiDefinition: MonthlyKpiDefinitionDto = {
+      id: kpi.id,
+      topic: {
+        id: kpi.topic.id,
+        description: kpi.topic.description,
+        code: kpi.topic.code,
+        alias_code: kpi.topic.alias_code,
+      },
+      kpiYear: kpi.kpi_year,
+      kpiStartDate: kpi.kpiStartDate,
+      measure: kpi.measureCategory
+        ? {
+            id: kpi.measureCategory.id,
+            description: kpi.measureCategory.description,
+          }
+        : undefined,
+      unit: {
+        id: kpi.unit.id,
+        description: kpi.unit.description,
+        symbol: kpi.unit.symbol ?? undefined,
+        scale_factor: kpi.unit.scale_factor ?? undefined,
+        is_percent: kpi.unit.is_percent,
+      },
+      conditionOperator: kpi.conditionOperator
+        ? {
+            id: kpi.conditionOperator.id,
+            description: kpi.conditionOperator.description,
+            symbol: kpi.conditionOperator.symbol ?? undefined,
+          }
+        : undefined,
+      formula: {
+        numerator: kpi.numerator,
+        denominator: kpi.denominator,
+        multiplier: kpi.multiplier,
+      },
+      targetValue: kpi.targetValue,
+      benchmark: kpi.benchmark
+        ? {
+            id: kpi.benchmark.id,
+            description: kpi.benchmark.description,
+            targetValue: kpi.benchmark_target_value,
+          }
+        : undefined,
+      strategies:
+        kpi.kpiStrategies?.map((mapping) => ({
+          id: mapping.strategy.id,
+          code: mapping.strategy.code,
+          description: mapping.strategy.description,
+          strategyGroup: mapping.strategy.strategyGroup,
+        })) ?? [],
+      organizations:
+        kpi.kpiOrganizations?.map((mapping) => ({
+          id: mapping.organization.id,
+          code: mapping.organization.code,
+          description: mapping.organization.description,
+          organizationGroup: mapping.organization.organizationGroup,
+        })) ?? [],
+      serviceUnits:
+        kpi.kpiServiceUnits?.map((mapping) => ({
+          id: mapping.serviceUnit.id,
+          code: mapping.serviceUnit.code,
+          description: mapping.serviceUnit.description,
+          serviceunitGroup: mapping.serviceUnit.serviceUnitGroup,
+        })) ?? [],
+      simples:
+        kpi.kpiSimples?.map((mapping) => ({
+          id: mapping.simple.id,
+          code: mapping.simple.code,
+          description: mapping.simple.description,
+          simpleGroup: mapping.simple.kpisimplegroup,
+        })) ?? [],
+    };
+
+    const monthlyResults: MonthlyKpiResultItemDto[] = entries.map(
+      (entry) => {
+        const rawCalculatedValue = this.calc.calculateValue(entry,kpi.unit,);
+        const calculatedValue = Math.round(rawCalculatedValue * 100) / 100;
+        const currentPassStatus =
+          this.calc.calculateCurrentPassStatus(
+            calculatedValue,
+            kpi.targetValue,
+            kpi.conditionOperator?.symbol ?? undefined,
+          );
+
+        return {
+          id: entry.id,
+          kpiDefinitionId: entry.kpiDefinitionId,
+          month: entry.kpiDefMonth,
+          year: entry.kpiDefYear,
+          numeratorValue: entry.numeratorValue,
+          denominatorValue: entry.denominatorValue,
+          calculatedValue,
+          targetValue: kpi.targetValue,
+          conditionOperator: kpi.conditionOperator
+            ? {
+                id: kpi.conditionOperator.id,
+                description: kpi.conditionOperator.description,
+                symbol: kpi.conditionOperator.symbol ?? undefined,
+              }
+            : undefined,
+          currentPassStatus,
+        };
+      },
+    );
+
+    return {
+      kpiDefinition,
+      assignedUsers,
+      year,
+      monthlyResults,
+    };
+  }
+
 }
