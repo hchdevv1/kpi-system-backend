@@ -47,6 +47,29 @@ export class KpiSummaryQuarterlyResultDto {
   result!: number | null;
 }
 
+/**
+ * KPI Formula
+ */
+export class KpiSummaryFormulaDto {
+  @ApiProperty({
+    example: 'Numerator description',
+    nullable: true,
+  })
+  numerator!: string | null;
+
+  @ApiProperty({
+    example: 'Denominator description',
+    nullable: true,
+  })
+  denominator!: string | null;
+
+  @ApiProperty({
+    example: 100,
+    nullable: true,
+  })
+  multiplier!: number | null;
+}
+
 export class KpiSummaryResponseItemDto {
   @ApiProperty({
     example: 1106,
@@ -56,6 +79,9 @@ export class KpiSummaryResponseItemDto {
 
   @ApiProperty({ type: KpiSummaryMasterDto })
   kpi!: KpiSummaryMasterDto;
+
+  @ApiProperty({ type: KpiSummaryFormulaDto })
+  formula!: KpiSummaryFormulaDto;
 
   @ApiProperty({ example: 2026 })
   year!: number;

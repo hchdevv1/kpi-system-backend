@@ -572,6 +572,11 @@ export class KpiSummaryService {
         code: entity.topic.code,
         description: entity.topic.description,
       },
+      formula: {
+        numerator: entity.numerator ?? null,
+        denominator: entity.denominator ?? null,
+        multiplier: entity.multiplier ?? null,
+      },
       year: entity.kpi_year,
       frequency: entity.frequency?.description ?? null,
       benchmark:
